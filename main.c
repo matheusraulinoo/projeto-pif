@@ -1,5 +1,6 @@
 #include "raylib.h"
 #include <stdio.h>
+#include "entitys.c"
 
 // Ao modificar o codigo, o projeto deve ser recompilado para que as alterações tenham efeito.
 // comando pra fazer isso: gcc main.c -o jogo.exe -I C:\raylib\include -L C:\raylib\lib -lraylib -lopengl32 -lgdi32 -lwinmm
@@ -23,6 +24,9 @@
 #define SPRITE_TAM      32
 #define SPRITE_FRAMES   4
 #define SPRITE_VEL_ANIM 0.12f   // segundos por frame
+
+#define ARVORE_TAM      64      
+#define ARVORE_FRAMES   2
 
 static int ColideComAzul(int mapa[LINHAS][COLS], Vector2 centro, float raio)
 {
