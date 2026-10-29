@@ -5,36 +5,36 @@ typedef struct{
     Vector2 posicao;
     int vida;
     int vida_maxima;
-    bool quebrada;
+    bool quebrado;
     float tempo_renascimento;
     float cooldown_renascimento;
 }Recursos;
 
 
-void querbrar_arvore(Recursos *arvore, int dano) {
-    if (arvore->quebrada) return; // Não dá para quebrar o que já está quebrado
+void quebrar_recurso(Recursos *recurso, int dano) {
+    if (recurso->quebrado) return; // Não dá para quebrar o que já está quebrado
 
-    arvore->vida -= dano;
+    recurso->vida -= dano;
 
-    if (arvore->vida <= 0) {
-        arvore->quebrada = true;
-        arvore->tempo_renascimento = arvore->cooldown_renascimento; // Inicia a contagem regressiva
+    if (recurso->vida <= 0) {
+        recurso->quebrado = true;
+        recurso->tempo_renascimento = recurso->cooldown_renascimento; // Inicia a contagem regressiva
     }
 }
 
 
-void Atualiza_arvore(Recursos *arvores, int quant) {
+void atualiza_recurso(Recursos *recurso, int quant) {
     float deltaTime = GetFrameTime(); // Tempo do frame atual em segundos
 
     for (int i = 0; i < quant; i++) {
-        if (arvores[i].quebrada) {
+        if (recurso[i].quebrado) {
             // Conta o tempo para renascer
-            arvores[i].tempo_renascimento -= deltaTime;
+            recurso[i].tempo_renascimento -= deltaTime;
 
-            if (arvores[i].tempo_renascimento <= 0.0f) {
+            if (recurso[i].tempo_renascimento <= 0.0f) {
                 // Renasce a árvore!
-                arvores[i].quebrada = false;
-                arvores[i].vida = arvores[i].vida_maxima;
+                recurso[i].quebrado = false;
+                recurso[i].vida = recurso[i].vida_maxima;
             }
         }
     }
