@@ -122,8 +122,25 @@ void SpawnMonstro(
     char mapa[LINHAS][COLS],
     Recursos *arvores
 ) {
-    if (*quantidadeMonstros >= MAX_MONSTROS) return;
+    int slot = -1;
 
+    // Procura um espaço ocupado por um monstro morto
+    for (int i = 0; i < *quantidadeMonstros; i++) {
+        if (monstros[i].morto) {
+            slot = i;
+            break;
+        }
+    }
+
+    // Se não encontrou um monstro morto, usa um novo espaço
+    if (slot == -1) {
+        if (*quantidadeMonstros >= MAX_MONSTROS) {
+            return;
+        }
+
+        slot = *quantidadeMonstros;
+    }
+    
     for (int tentativa = 0; tentativa < 100; tentativa++) {
 
         // Escolhe uma posição aleatória entre -20 e +20 tiles
@@ -177,7 +194,7 @@ void SpawnMonstro(
         if (pertoArvore) continue;
 
         // Posição válida: cria o monstro
-        monstros[*quantidadeMonstros] = (Monstro){
+        monstros[slot] = (Monstro){
             .posicao = pos,
             .velocidade = 100.0f,
             .nivel = 1,
@@ -188,7 +205,11 @@ void SpawnMonstro(
             .morto = false
         };
 
-        (*quantidadeMonstros)++;
+        // Incrementa somente se utilizamos um slot novo
+        if (slot == *quantidadeMonstros) {
+            (*quantidadeMonstros)++;
+        }
+
         return;
     }
 }
@@ -583,7 +604,7 @@ int main(void)
             vida = VIDA_JOGADOR;
         }
         //logica de spawn de monstros
-        if (isNoite){
+        if (isNoite && !dentro){
             timerSpawn += dt;
 
             if (timerSpawn >= intervaloSpawn) {
@@ -610,24 +631,26 @@ int main(void)
         float danoSol = 2.0f;
         
         //atualiza monstros
-        for (int i = 0; i < quantidadeMonstros; i++) {
-            if (monstros[i].morto) continue;
-            
-            MoverMonstro(
-                &monstros[i],
-                jogador,
-                dt,
-                mapa,
-                arvoresAtivas
-            );
-            
-            //dano de sol
-            if (!isNoite) {
-                monstros[i].vida -= danoSol * dt;
+        if (!dentro){
+            for (int i = 0; i < quantidadeMonstros; i++) {
+                if (monstros[i].morto) continue;
+                
+                MoverMonstro(
+                    &monstros[i],
+                    jogador,
+                    dt,
+                    mapa,
+                    arvoresAtivas
+                );
+                
+                //dano de sol
+                if (!isNoite) {
+                    monstros[i].vida -= danoSol * dt;
 
-                if (monstros[i].vida <= 0) {
-                    monstros[i].vida = 0;
-                    monstros[i].morto = true;
+                    if (monstros[i].vida <= 0) {
+                        monstros[i].vida = 0;
+                        monstros[i].morto = true;
+                    }
                 }
             }
         }
