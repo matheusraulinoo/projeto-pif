@@ -335,6 +335,35 @@ void MoverMonstro(
     }
 }
 
+bool AtingidoPorSlash(
+    Vector2 jogador,
+    Vector2 alvo,
+    Vector2 direcaoSlash,
+    float alcance,
+    float angulo,
+    float raioAlvo
+) {
+    Vector2 diferenca = Vector2Subtract(alvo, jogador);
+    float distancia = Vector2Length(diferenca);
+
+    // Fora do alcance
+    if (distancia > alcance + raioAlvo) return false;
+
+    // Muito próximo: sempre atingido
+    if (distancia < 0.001f) return true;
+
+    Vector2 direcaoAlvo = Vector2Normalize(diferenca);
+
+    float produtoEscalar = Vector2DotProduct(
+        direcaoSlash,
+        direcaoAlvo
+    );
+
+    float limiteAngulo = cosf((angulo / 2.0f) * DEG2RAD);
+
+    return produtoEscalar >= limiteAngulo;
+}
+
 int main(void)
 {
     InitWindow(LARGURA_TELA, ALTURA_TELA, "Mapa maior que a tela");
@@ -348,6 +377,19 @@ int main(void)
     float defesaJogador = 0.0f;
     float cooldownDano = 0.0f;
     const float intervaloDano = 1.0f;
+
+    int ataqueJogador = 3;
+
+    float cooldownAtaque = 0.0f;
+    const float intervaloAtaque = 0.4f;
+
+    float timerSlash = 0.0f;
+    const float duracaoSlash = 0.15f;
+
+    const float alcanceSlash = 120.0f;
+    const float anguloSlash = 100.0f;
+
+    Vector2 direcaoSlash = {1.0f, 0.0f};
 
     int inventory[50] = {0};
     // inventory[1] vai representar a Madeira. 
@@ -575,7 +617,64 @@ int main(void)
         if (camera.target.x > MAPA_LARGURA - metadeL) camera.target.x = MAPA_LARGURA - metadeL;
         if (camera.target.y > MAPA_ALTURA  - metadeA) camera.target.y = MAPA_ALTURA  - metadeA;
 
-                atualiza_recurso(arvores);
+        // Atualiza timers de ataque
+        if (cooldownAtaque > 0.0f) {
+            cooldownAtaque -= dt;
+            if (cooldownAtaque < 0.0f) cooldownAtaque = 0.0f;
+        }
+
+        if (timerSlash > 0.0f) {
+            timerSlash -= dt;
+            if (timerSlash < 0.0f) timerSlash = 0.0f;
+        }
+
+        // Ataque do jogador
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
+            cooldownAtaque <= 0.0f) {
+
+            Vector2 mouseMundo = GetScreenToWorld2D(
+                GetMousePosition(),
+                camera
+            );
+
+            Vector2 direcao = Vector2Subtract(mouseMundo, jogador);
+
+            if (Vector2LengthSqr(direcao) > 0.001f) {
+                direcaoSlash = Vector2Normalize(direcao);
+            }
+
+            cooldownAtaque = intervaloAtaque;
+            timerSlash = duracaoSlash;
+
+            // Verifica todos os monstros
+            if (!dentro) {
+                for (int i = 0; i < quantidadeMonstros; i++) {
+                    if (monstros[i].morto) continue;
+
+                    if (AtingidoPorSlash(
+                        jogador,
+                        monstros[i].posicao,
+                        direcaoSlash,
+                        alcanceSlash,
+                        anguloSlash,
+                        12.0f
+                    )) {
+
+                        float dano = ataqueJogador - monstros[i].defesa;
+                        if (dano < 0.0f) dano = 0.0f;
+
+                        monstros[i].vida -= dano;
+
+                        if (monstros[i].vida <= 0.0f) {
+                            monstros[i].vida = 0.0f;
+                            monstros[i].morto = true;
+                        }
+                    }
+                }
+            }
+        }
+                
+        atualiza_recurso(arvores);
 
         if (IsKeyPressed(KEY_E))
         {
@@ -772,7 +871,6 @@ int main(void)
                         0.0f,
                         WHITE
                     );
-
                     // Barra de vida do monstro
                     float larguraBarra = 32.0f;
                     float alturaBarra = 5.0f;
@@ -799,6 +897,23 @@ int main(void)
                         (int)(larguraBarra * porcentagemVida),
                         (int)alturaBarra,
                         RED
+                    );
+                }
+
+                if (timerSlash > 0.0f) {
+
+                    float anguloCentral = atan2f(
+                        direcaoSlash.y,
+                        direcaoSlash.x
+                    ) * RAD2DEG;
+
+                    DrawCircleSector(
+                        jogador,
+                        alcanceSlash,
+                        anguloCentral - anguloSlash / 2.0f,
+                        anguloCentral + anguloSlash / 2.0f,
+                        24,
+                        (Color){255, 230, 100, 110}
                     );
                 }
 
