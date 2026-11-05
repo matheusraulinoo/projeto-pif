@@ -345,6 +345,10 @@ int main(void)
     float vida = VIDA_JOGADOR;
     Vector2 inicio = jogador;     // ponto de renascimento
 
+    float defesaJogador = 0.0f;
+    float cooldownDano = 0.0f;
+    const float intervaloDano = 1.0f;
+
     int inventory[50] = {0};
     // inventory[1] vai representar a Madeira. 
     
@@ -461,6 +465,15 @@ int main(void)
         float angulo_dia = (hora_frac / 24.0f) * 2.0f * PI;
         float intensidade_noite = (cosf(angulo_dia) + 1.0f) * 0.5f * ESCURIDAO_MAXIMA;
         bool isNoite = intensidade_noite > 0.4f;
+
+        // Atualiza tempo de invulnerabilidade do jogador
+        if (cooldownDano > 0.0f) {
+            cooldownDano -= dt;
+
+            if (cooldownDano < 0.0f) {
+                cooldownDano = 0.0f;
+            }
+        }
 
         // Movimento do jogador
         Vector2 proximo = jogador;
@@ -642,6 +655,27 @@ int main(void)
                     mapa,
                     arvoresAtivas
                 );
+
+                // Dano por contato com monstro
+                if (cooldownDano <= 0.0f &&
+                    CheckCollisionCircles(
+                        jogador, 14.0f,
+                        monstros[i].posicao, 12.0f
+                    )) {
+
+                    float dano = monstros[i].ataque - defesaJogador;
+
+                    if (dano < 0.0f) {
+                        dano = 0.0f;
+                    }
+
+                    vida -= dano;
+
+                    cooldownDano = intervaloDano;
+
+                    printf("Monstro atacou! Dano: %.1f | Vida: %.1f\n",
+                        dano, vida);
+                }
                 
                 //dano de sol
                 if (!isNoite) {
@@ -706,7 +740,9 @@ int main(void)
                 Rectangle origem  = { frameAtual * (float)SPRITE_TAM, direcao * (float)SPRITE_TAM, SPRITE_TAM, SPRITE_TAM };
                 Rectangle destino = { jogador.x, jogador.y, SPRITE_TAM, SPRITE_TAM };
                 Vector2 centro = { SPRITE_TAM / 2.0f, SPRITE_TAM / 2.0f };
-                DrawTexturePro(personagem, origem, destino, centro, 0.0f, WHITE);
+
+                Color corJogador = cooldownDano > 0.0f ? RED : WHITE;
+                DrawTexturePro(personagem, origem, destino, centro, 0.0f, corJogador);
                 
                 // 4. Y-SORTING PARTE 2: Desenha as árvores que estão na FRENTE do jogador
                 // Monstros
