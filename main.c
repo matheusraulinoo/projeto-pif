@@ -736,6 +736,34 @@ int main(void)
                         0.0f,
                         WHITE
                     );
+
+                    // Barra de vida do monstro
+                    float larguraBarra = 32.0f;
+                    float alturaBarra = 5.0f;
+
+                    float porcentagemVida = monstros[i].vida / monstros[i].vida_maxima;
+                    porcentagemVida = Clamp(porcentagemVida, 0.0f, 1.0f);
+
+                    float xBarra = monstros[i].posicao.x - larguraBarra / 2.0f;
+                    float yBarra = monstros[i].posicao.y - 26.0f;
+
+                    // Fundo da barra
+                    DrawRectangle(
+                        (int)xBarra,
+                        (int)yBarra,
+                        (int)larguraBarra,
+                        (int)alturaBarra,
+                        DARKGRAY
+                    );
+
+                    // Parte preenchida
+                    DrawRectangle(
+                        (int)xBarra,
+                        (int)yBarra,
+                        (int)(larguraBarra * porcentagemVida),
+                        (int)alturaBarra,
+                        RED
+                    );
                 }
 
                 for (Recursos *a = arvoresAtivas; a != NULL; a = a->proximo)
