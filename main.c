@@ -31,8 +31,8 @@
 
 #define CASA_SPAWN_X (55 * TILE + TILE / 2.0f)
 #define CASA_SPAWN_Y (38 * TILE + TILE / 2.0f)
-#define CAVERNA_SPAWN_X (50 * TILE + TILE / 2.0f)
-#define CAVERNA_SPAWN_Y (40 * TILE + TILE / 2.0f)
+#define CAVERNA_SPAWN_X (97 * TILE + TILE / 2.0f)
+#define CAVERNA_SPAWN_Y (20 * TILE + TILE / 2.0f)
 
 // Sprite do personagem (spritesheet 4x4, frames de 32x32)
 #define SPRITE_TAM      32
@@ -48,6 +48,12 @@
 #define ESCALA_ARVORE      2.5f 
 #define RAIO_TRONCO        12.0f
 
+#define MAX_PEDRAS        200
+#define DENSIDADE_PEDRAS  5        // % de chance de cada tile 3 virar pedra
+#define DIST_MIN_PEDRAS   80.0f   // distância mínima entre pedras (px)
+#define ESCALA_PEDRA      2.0f
+#define RAIO_PEDRA        12.0f
+
 // Recortes no spritesheet (arvore.png, 74x62)
 #define RECORTE_TOCO   (Rectangle){ 1, 48, 22, 14 }
 #define RECORTE_ARVORE (Rectangle){ 34, 0, 39, 61 }
@@ -61,6 +67,8 @@
 
 Monstro monstros[MAX_MONSTROS] = {0};
 int quantidadeMonstros = 0;
+
+
 
 float timerSpawn = 0.0f;
 float intervaloSpawn = 2.0f; // um monstro a cada 2 segundos
@@ -77,7 +85,7 @@ static int ColideComParede(char mapa[LINHAS][COLS], Vector2 centro, float raio)
         for (int x = minX; x <= maxX; x++)
         {
             // Somente os tiles andaveís (valor 1, 2 e 6) permitem a passagem; fora do mapa também bloqueia.
-            if (x >= 0 && x < COLS && y >= 0 && y < LINHAS && (mapa[y][x] == 0 || mapa[y][x] == 2 || mapa[y][x] == 1 || mapa[y][x] == 6 || mapa[y][x] == 7 || mapa[y][x] == 8 || mapa[y][x] == 9)) continue;
+            if (x >= 0 && x < COLS && y >= 0 && y < LINHAS && (mapa[y][x] == 0 || mapa[y][x] == 2 || mapa[y][x] == 3 || mapa[y][x] == 1 || mapa[y][x] == 6 || mapa[y][x] == 7 || mapa[y][x] == 8 || mapa[y][x] == 9)) continue;
 
             float esquerda = x * TILE;
             float topo = y * TILE;
@@ -92,23 +100,38 @@ static int ColideComParede(char mapa[LINHAS][COLS], Vector2 centro, float raio)
     return 0;
 }
 
-static int ColideComArvore(Vector2 atual, Vector2 proximo, float raio, Recursos *arvores)
+static int ColideComRecursos(Vector2 atual, Vector2 proximo, float raio, Recursos *recursos)
 {
-    for (Recursos *a = arvores; a != NULL; a = a->proximo)
+    for (Recursos *recurso = recursos; recurso != NULL; recurso = recurso->proximo)
     {
+        if (recurso->raio_colisao <= 0.0f) continue;
 
-        // centro do tronco: um pouco acima da base da árvore
-        Vector2 c = { a->posicao.x, a->posicao.y - 20.0f };
-        float limite = raio + RAIO_TRONCO;
+        Vector2 centro = Vector2Add(recurso->posicao, recurso->offset_colisao);
+        float limite = raio + recurso->raio_colisao;
 
-        float dxN = proximo.x - c.x, dyN = proximo.y - c.y;
-        float dxA = atual.x   - c.x, dyA = atual.y   - c.y;
+        float dxN = proximo.x - centro.x, dyN = proximo.y - centro.y;
+        float dxA = atual.x - centro.x, dyA = atual.y - centro.y;
         float distNova  = dxN * dxN + dyN * dyN;
         float distAtual = dxA * dxA + dyA * dyA;
 
-        // bloqueia só se o passo entra no tronco E aproxima do centro.
-        // Isso evita o jogador ficar preso se uma árvore renascer em cima dele.
+        // Evita prender o personagem caso um recurso reapareça sobre ele.
         if (distNova < limite * limite && distNova < distAtual) return 1;
+    }
+    return 0;
+}
+
+static int SobrepoeRecurso(Vector2 posicao, float raio, Recursos *recursos)
+{
+    for (Recursos *recurso = recursos; recurso != NULL; recurso = recurso->proximo)
+    {
+        if (recurso->raio_colisao <= 0.0f) continue;
+
+        Vector2 centro = Vector2Add(recurso->posicao, recurso->offset_colisao);
+        float limite = raio + recurso->raio_colisao;
+        float dx = posicao.x - centro.x;
+        float dy = posicao.y - centro.y;
+
+        if (dx * dx + dy * dy < limite * limite) return 1;
     }
     return 0;
 }
@@ -154,27 +177,8 @@ void SpawnMonstro(
         // Verifica colisão com paredes
         if (ColideComParede(mapa, pos, 12.0f)) continue;
 
-        // Verifica colisão com árvores
-        // (não usa a função ColideComArvore() pq ela não verifica se o monstro ta literalmente dentro da arvore)
-        bool pertoArvore = false;
-
-        for (Recursos *a = arvores; a != NULL; a = a->proximo) {
-            Vector2 tronco = {
-                a->posicao.x,
-                a->posicao.y - 20.0f
-            };
-
-            float dx = pos.x - tronco.x;
-            float dy = pos.y - tronco.y;
-            float limite = 12.0f + RAIO_TRONCO;
-
-            if (dx * dx + dy * dy < limite * limite) {
-                pertoArvore = true;
-                break;
-            }
-        }
-
-        if (pertoArvore) continue;
+        // Não permite que monstros nasçam sobre recursos.
+        if (SobrepoeRecurso(pos, 12.0f, arvores)) continue;
 
         // Posição válida: cria o monstro
         monstros[*quantidadeMonstros] = (Monstro){
@@ -300,7 +304,7 @@ void MoverMonstro(
     proximo.x += direcao.x * passo;
 
     if (!ColideComParede(mapa, proximo, raio) &&
-        !ColideComArvore(monstro->posicao, proximo, raio, arvores)) {
+        !ColideComRecursos(monstro->posicao, proximo, raio, arvores)) {
         monstro->posicao.x = proximo.x;
     }
 
@@ -309,7 +313,7 @@ void MoverMonstro(
     proximo.y += direcao.y * passo;
 
     if (!ColideComParede(mapa, proximo, raio) &&
-        !ColideComArvore(monstro->posicao, proximo, raio, arvores)) {
+        !ColideComRecursos(monstro->posicao, proximo, raio, arvores)) {
         monstro->posicao.y = proximo.y;
     }
 }
@@ -324,16 +328,20 @@ int main(void)
     float vida = VIDA_JOGADOR;
     Vector2 inicio = jogador;     // ponto de renascimento
 
-    int inventory[50] = {0};
+    Inventario inv = {0};
+    int invAberto = 0;
     // inventory[1] vai representar a Madeira. 
     
 
-    recipe receita_graveto;
-    receita_graveto.id_result = 10;       
-    receita_graveto.qtd_result = 1;       
-    receita_graveto.total_resources = 1;  
-    receita_graveto.resource[0].id_item = 1; // ID 1 = Madeira
-    receita_graveto.resource[0].qtd = 2;     // Custa 2 madeiras
+    Receita receitaGraveto = {
+        .resultado = ITEM_GRAVETO, .qtdResultado = 1,
+        .ing = { { ITEM_MADEIRA, 2 } }, .totalIng = 1
+    };
+
+    Receita receitaEspadaPedra = {
+        .resultado = ITEM_ESPADA, .qtdResultado = 1, .tier = TIER_PEDRA,
+        .ing = { { ITEM_PEDRA, 2 }, { ITEM_GRAVETO, 1 } }, .totalIng = 2
+    };
 
     // --- CARREGAMENTO DE TEXTURAS (Uma única vez aqui) ---
     float tempo_jogo = 0.0f;          // Conta os segundos passados no jogo
@@ -344,9 +352,6 @@ int main(void)
     
     Texture2D texArvore = LoadTexture("pictures/arvore.png");
     SetTextureFilter(texArvore, TEXTURE_FILTER_POINT);
-
-    Texture2D texGrama = LoadTexture("pictures/textures/grama.png");
-    SetTextureFilter(texGrama, TEXTURE_FILTER_POINT);
 
     int frameAtual = 0;
     int direcao = 0;          // 0=baixo, 1=esquerda, 2=direita, 3=cima
@@ -374,6 +379,9 @@ int main(void)
     }
 
     Recursos *arvores = NULL;
+    Recursos *pedras = NULL;
+    int numPedras = 0;
+    int pedra = 0;
     int numArvores = 0;
     int madeira = 0;
 
@@ -402,6 +410,8 @@ int main(void)
 
             inserir_recurso(&arvores, (Recursos){
                 .posicao = pos,
+                .offset_colisao = { 0.0f, -20.0f },
+                .raio_colisao = RAIO_TRONCO,
                 .vida = 3,
                 .vida_maxima = 3,
                 .quebrado = false,
@@ -409,6 +419,43 @@ int main(void)
                 .cooldown_renascimento = 10.0f
             });
             numArvores++;
+        }
+    }
+
+    for (int ty = 0; ty < LINHAS && numPedras < MAX_PEDRAS; ty++)
+    {
+        for (int tx = 0; tx < COLS && numPedras < MAX_PEDRAS; tx++)
+        {
+            if (mapa[ty][tx] != 3) continue;                      // só nos tiles 3
+            if (GetRandomValue(0, 99) >= DENSIDADE_PEDRAS) continue;
+
+            Vector2 pos = { tx * TILE + TILE / 2.0f, ty * TILE + TILE };
+
+            // não nasce em cima do jogador
+            float dx = pos.x - jogador.x, dy = pos.y - jogador.y;
+            if (dx * dx + dy * dy < 64.0f * 64.0f) continue;
+
+                        // nem colada em outra pedra
+            int perto = 0;
+            for (Recursos *a = pedras; a != NULL; a = a->proximo)
+            {
+                dx = pos.x - a->posicao.x;
+                dy = pos.y - a->posicao.y;
+                if (dx * dx + dy * dy < DIST_MIN_PEDRAS * DIST_MIN_PEDRAS) { perto = 1; break; }
+            }
+            if (perto) continue;
+
+            inserir_recurso(&pedras, (Recursos){
+                .posicao = pos,
+                .offset_colisao = { 0.0f, -20.0f },
+                .raio_colisao = RAIO_PEDRA,
+                .vida = 5,
+                .vida_maxima = 5,
+                .quebrado = false,
+                .tempo_renascimento = 0.0f,
+                .cooldown_renascimento = 30.0f
+            });
+            numPedras++;
         }
     }
     
@@ -445,12 +492,12 @@ int main(void)
         Vector2 proximo = jogador;
         if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) proximo.x += velocidade * dt;
         if (IsKeyDown(KEY_LEFT)  || IsKeyDown(KEY_A)) proximo.x -= velocidade * dt;
-        if (!ColideComParede(mapa, proximo, 14.0f) && !ColideComArvore(jogador, proximo, 14.0f, arvoresAtivas)) jogador.x = proximo.x;
+        if (!ColideComParede(mapa, proximo, 14.0f) && !ColideComRecursos(jogador, proximo, 14.0f, arvoresAtivas)) jogador.x = proximo.x;
 
         proximo = jogador;
         if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S)) proximo.y += velocidade * dt;
         if (IsKeyDown(KEY_UP)   || IsKeyDown(KEY_W)) proximo.y -= velocidade * dt;
-        if (!ColideComParede(mapa, proximo, 14.0f) && !ColideComArvore(jogador, proximo, 14.0f, arvoresAtivas)) jogador.y = proximo.y;
+        if (!ColideComParede(mapa, proximo, 14.0f) && !ColideComRecursos(jogador, proximo, 14.0f, arvoresAtivas)) jogador.y = proximo.y;
 
         // Limita o jogador dentro do mapa
         if (jogador.x < 0) jogador.x = 0;
@@ -554,17 +601,17 @@ int main(void)
                 if (dx * dx + dy * dy < 50.0f * 50.0f)   // alcance de 50 px
                 {
                     quebrar_recurso(a, 1);
-                    if (a->quebrado) inventory[1]++;   // ganha madeira ao derrubar
+                    if (a->quebrado) Inv_Add(&inv, ITEM_MADEIRA, 1);   // ganha madeira ao derrubar
                     break;                                // só uma árvore por golpe
                 }
             }
         }
 
-        if (IsKeyPressed(KEY_C))
-        {
-            printf("\n--- Tentando craftar ---\n");
-            crafting(receita_graveto, inventory);
-        }
+        if (IsKeyPressed(KEY_C)) Craftar(&inv, receitaGraveto);
+
+        if (IsKeyPressed(KEY_TAB)) invAberto = !invAberto;
+        for (int k = 0; k < INV_COLS; k++)
+            if (IsKeyPressed(KEY_ONE + k)) inv.selecionado = k;
 
         // Dano contínuo na água (testa o "pé" do personagem)
         int naAgua = (TileEm(mapa, (Vector2){ jogador.x, jogador.y + 12.0f }) == 0);
@@ -642,34 +689,34 @@ int main(void)
                 {
                     for (int x = 0; x < COLS; x++)
                     {
-                        // Se for o tile 2 (Grama), desenha a textura repetida em vez de cor sólida
-                        if (mapa[y][x] == 2)
+                        Color cor;
+                        switch (mapa[y][x])
                         {
-                            DrawTexture(texGrama, x * TILE, y * TILE, WHITE);
+                            case 0: cor = BLUE;      break;
+                            case 2: cor = GREEN;     break;
+                            case 1: cor = BEIGE;     break;
+                            case 3: cor = DARKGRAY;  break;
+                            case 4: cor = LIGHTGRAY; break;
+                            case 5: cor = BROWN;     break;
+                            case 6: cor = (Color){ 20, 140, 60, 255 }; break;
+                            case 7: case 8: cor = BLACK;     break;
+                            case 9: cor = (Color){ 141, 73, 37, 255 }; break;
+                            case 'a': cor = (Color){ 255, 255, 0, 255 }; break;
+                            case 'b': cor = (Color){ 255, 0, 255, 255 }; break;
+                            case 'c': cor = (Color){ 0, 255, 255, 255 }; break;
+                            case 'd': cor = (Color){ 255, 128, 0, 255 }; break;
+                            case 'e': cor = (Color){ 128, 0, 255, 255 }; break;
+                            case 'f': cor = (Color){ 0, 255, 128, 255 }; break;
+                            case 'g': cor = (Color){ 255, 0, 0, 255 };   break;
+                            case 'h': cor = (Color){ 69, 46, 81, 255 };  break;
+                            case 'i': cor = (Color){ 0, 85, 255, 255 };  break;
+                            case 'j': cor = (Color){ 255, 0, 170, 255 }; break;
+                            case 'k': cor = (Color){ 0, 250, 255, 255 }; break;
+                            case 'l': cor = (Color){ 242, 0, 255, 255 }; break;
+                            case 'm': cor = (Color){ 0, 255, 0, 255 };   break;
+                            default: cor = BLACK;    break; 
                         }
-                        else
-                        {
-                            Color cor;
-                            switch (mapa[y][x])
-                            {
-                                case 0: cor = BLUE;      break;
-                                case 1: cor = BEIGE;     break;
-                                case 3: cor = DARKGRAY;  break;
-                                case 4: cor = LIGHTGRAY; break;
-                                case 5: cor = BROWN;     break;
-                                case 6: cor = (Color){ 20, 140, 60, 255 }; break;
-                                case 7: case 8: cor = BLACK;     break;
-                                case 9: cor = (Color){ 141, 73, 37, 255 }; break;
-                                case 'a': cor = (Color){ 255, 255, 0, 255 }; break;
-                                case 'b': cor = (Color){ 255, 0, 255, 255 }; break;
-                                case 'c': cor = (Color){ 0, 255, 255, 255 }; break;
-                                case 'd': cor = (Color){ 255, 128, 0, 255 }; break;
-                                case 'e': cor = (Color){ 128, 0, 255, 255 }; break;
-                                case 'f': cor = (Color){ 0, 255, 128, 255 }; break;
-                                default: cor = BLACK;    break; 
-                            }
-                            DrawRectangle(x * TILE, y * TILE, TILE, TILE, cor);
-                        }
+                        DrawRectangle(x * TILE, y * TILE, TILE, TILE, cor);
                     }
                 }
 
@@ -727,14 +774,19 @@ int main(void)
 
             DesenhaVida(vida);
 
+            if (invAberto) {
+                DrawRectangle(156, 111, 488, 228, Fade(BLACK, 0.6f));   // fundo
+                Inv_Draw(&inv, 166, 121, INV_ROWS);                     // grade completa
+            } else {
+                Inv_Draw(&inv, 166, 394, 1);                            // só a hotbar
+            }
+
             
             DrawText("Setas ou WASD para mover", 10, 10, 20, BLACK);
 
             DrawText("Pressione C para craftar graveto!", 10, 32, 16,BLACK);
             DrawText(TextFormat("Dia %d | %s %02d:%02d", dia, isNoite ? "Noite" : "Dia", hora, minuto), 545, 10, 20, isNoite ? BLUE : GOLD);
             DrawFPS(10, 40);
-            DrawText(TextFormat("Madeira (ID 1): %d", inventory[1]), 10, 90, 20, WHITE);
-            DrawText(TextFormat("Graveto (ID 10): %d", inventory[10]), 10, 120, 20, WHITE);
         EndDrawing();
     }
 
@@ -743,7 +795,6 @@ int main(void)
     liberar_recursos(arvores);
     UnloadTexture(personagem);
     UnloadTexture(texArvore);
-    UnloadTexture(texGrama);
     UnloadTexture(texturaMonstro);
     CloseWindow();
     return 0;
