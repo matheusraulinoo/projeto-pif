@@ -4,6 +4,8 @@
 
 typedef struct Recursos {
     Vector2 posicao;
+    Vector2 offset_colisao;
+    float raio_colisao;
     int vida;
     int vida_maxima;
     bool quebrado;

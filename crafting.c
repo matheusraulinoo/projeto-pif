@@ -1,36 +1,41 @@
 #include "raylib.h"
 #include <stdio.h>
+#include "inventory.c"
 
-
-typedef struct{
-    int id_item;
+typedef struct {
+    TipoItem tipo;
     int qtd;
-}res;
+} Ingrediente;
 
-typedef struct{
-    int id_result;
-    int qtd_result;
-    res resource[2];
-    int total_resources;
-}recipe;
+typedef struct {
+    TipoItem resultado;
+    int qtdResultado;
+    TierItem tier;
+    Ingrediente ing[4];
+    int totalIng;
+} Receita;
 
-int crafting(recipe Product ,int inventory[]){
-    for(int i=0;i<Product.total_resources;i++){
-        int id=Product.resource[i].id_item;
-        int quantity_required = Product.resource[i].qtd;
-
-        if (inventory[id]<quantity_required){
-            printf("Materiais insuficientes! Falta o item ID %d.\n", id);
+int Craftar(Inventario *inv, Receita r) {
+    for (int i = 0; i < r.totalIng; i++) {
+        if (Inv_Contar(inv, r.ing[i].tipo) < r.ing[i].qtd) {
+            printf("Falta: %s\n", itens[r.ing[i].tipo].nome);
             return 0;
         }
     }
-    for (int i = 0; i < Product.total_resources; i++) {
-        int id = Product.resource[i].id_item;
-        int quantity_required = Product.resource[i].qtd;
-        
-        inventory[id] -= quantity_required;
+
+    //confere se o resultado cabe antes de gastar material
+    int ehFerramenta = itens[r.resultado].maxQuantidade == 1;
+    if (ehFerramenta) {
+        int temVazio = 0;
+        for (int i = 0; i < INV_SIZE; i++)
+            if (inv->slots[i].tipo == ITEM_VAZIO) { temVazio = 1; break; }
+        if (!temVazio) { printf("Inventario cheio\n"); return 0; }
     }
-    inventory[Product.id_result] += Product.qtd_result;
-    printf("Produto fabricado com sucesso!");
+    for (int i = 0; i < r.totalIng; i++)
+        Inv_Remover(inv, r.ing[i].tipo, r.ing[i].qtd);
+
+    if (ehFerramenta) Inv_AddFerramenta(inv, r.resultado, r.tier);
+    else              Inv_Add(inv, r.resultado, r.qtdResultado);
+
     return 1;
 }
