@@ -381,17 +381,24 @@ int main(void)
     float defesaJogador = 0.0f;
     float cooldownDano = 0.0f;
     const float intervaloDano = 1.0f;
-
-    int ataqueJogador = 3;
-
+    
+    // Ferramenta temporária até integrar com o inventário
+    Ferramenta ferramentaAtual = {
+        .tipo = ITEM_MACHADO,
+        .tier = TIER_MADEIRA,
+        .dano = 3,
+        .poderCorte = 1,
+        .poderMineracao = 0,
+        .alcanceSlash = 120.0f,
+        .anguloSlash = 100.0f,
+        .intervaloAtaque = 0.4f,
+        .textura = {0}
+    };
+    
     float cooldownAtaque = 0.0f;
-    const float intervaloAtaque = 0.4f;
-
     float timerSlash = 0.0f;
     const float duracaoSlash = 0.15f;
 
-    const float alcanceSlash = 120.0f;
-    const float anguloSlash = 100.0f;
 
     Vector2 direcaoSlash = {1.0f, 0.0f};
 
@@ -690,7 +697,7 @@ int main(void)
                 direcaoSlash = Vector2Normalize(direcao);
             }
 
-            cooldownAtaque = intervaloAtaque;
+            cooldownAtaque = ferramentaAtual.intervaloAtaque;
             timerSlash = duracaoSlash;
 
             // Verifica todos os monstros
@@ -702,12 +709,12 @@ int main(void)
                         jogador,
                         monstros[i].posicao,
                         direcaoSlash,
-                        alcanceSlash,
-                        anguloSlash,
+                        ferramentaAtual.alcanceSlash,
+                        ferramentaAtual.anguloSlash,
                         12.0f
                     )) {
 
-                        float dano = ataqueJogador - monstros[i].defesa;
+                        float dano = ferramentaAtual.dano - monstros[i].defesa;
                         if (dano < 0.0f) dano = 0.0f;
 
                         monstros[i].vida -= dano;
@@ -718,27 +725,41 @@ int main(void)
                         }
                     }
                 }
+                // Corte de arvores com o slash
+                if (ferramentaAtual.poderCorte > 0) {
+    
+                    for (Recursos *a = arvoresAtivas; a != NULL; a = a->proximo) {
+    
+                        if (a->quebrado) continue;
+    
+                        // Usa o centro de colisao do tronco
+                        Vector2 centroArvore = Vector2Add(
+                            a->posicao,
+                            a->offset_colisao
+                        );
+    
+                        if (AtingidoPorSlash(
+                            jogador,
+                            centroArvore,
+                            direcaoSlash,
+                            ferramentaAtual.alcanceSlash,
+                            ferramentaAtual.anguloSlash,
+                            a->raio_colisao
+                        )) {
+    
+                            quebrar_recurso(a, ferramentaAtual.poderCorte);
+    
+                            // Mantem a recompensa existente
+                            if (a->quebrado) {
+                                Inv_Add(&inv, ITEM_MADEIRA, 1);
+                            }
+                        }
+                    }
+                }
             }
         }
                 
         atualiza_recurso(arvores);
-
-        if (IsKeyPressed(KEY_E))
-        {
-            for (Recursos *a = arvoresAtivas; a != NULL; a = a->proximo)
-            {
-                if (a->quebrado) continue;
-
-                float dx = jogador.x - a->posicao.x;
-                float dy = jogador.y - a->posicao.y;
-                if (dx * dx + dy * dy < 50.0f * 50.0f)   // alcance de 50 px
-                {
-                    quebrar_recurso(a, 1);
-                    if (a->quebrado) Inv_Add(&inv, ITEM_MADEIRA, 1);   // ganha madeira ao derrubar
-                    break;                                // só uma árvore por golpe
-                }
-            }
-        }
 
         if (IsKeyPressed(KEY_C)) Craftar(&inv, receitaGraveto);
 
@@ -956,9 +977,9 @@ int main(void)
 
                     DrawCircleSector(
                         jogador,
-                        alcanceSlash,
-                        anguloCentral - anguloSlash / 2.0f,
-                        anguloCentral + anguloSlash / 2.0f,
+                        ferramentaAtual.alcanceSlash,
+                        anguloCentral - ferramentaAtual.anguloSlash / 2.0f,
+                        anguloCentral + ferramentaAtual.anguloSlash / 2.0f,
                         24,
                         (Color){255, 230, 100, 110}
                     );

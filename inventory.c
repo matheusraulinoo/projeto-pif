@@ -167,3 +167,18 @@ int Inv_Remover(Inventario *inv, TipoItem tipo, int qtd) {
     }
     return 1;
 }
+
+typedef struct {
+    TipoItem tipo;
+    TierItem tier;
+
+    int dano;
+    int poderCorte;
+    int poderMineracao;
+
+    float alcanceSlash;
+    float anguloSlash;
+    float intervaloAtaque;
+
+    Texture2D textura;
+} Ferramenta;
