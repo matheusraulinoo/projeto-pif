@@ -31,8 +31,8 @@
 
 #define CASA_SPAWN_X (55 * TILE + TILE / 2.0f)
 #define CASA_SPAWN_Y (38 * TILE + TILE / 2.0f)
-#define CAVERNA_SPAWN_X (97 * TILE + TILE / 2.0f)
-#define CAVERNA_SPAWN_Y (20 * TILE + TILE / 2.0f)
+#define CAVERNA_SPAWN_X (96 * TILE + TILE / 2.0f)
+#define CAVERNA_SPAWN_Y (19 * TILE + TILE / 2.0f)
 
 // Sprite do personagem (spritesheet 4x4, frames de 32x32)
 #define SPRITE_TAM      32
@@ -64,6 +64,16 @@
 // Ciclo dia/noite
 #define HORA_INICIO      6.0f    // o jogo começa às 06:00
 #define ESCURIDAO_MAXIMA 0.75f   // opacidade máxima da noite (0 = sem escuro, 1 = preto)
+
+// Telas do jogo
+#define DURACAO_TELA_MORTE 4.0f  // segundos na tela de morte antes de renascer
+#define NUM_ESTRELAS       90
+
+typedef enum {
+    TELA_INICIO = 0,
+    TELA_JOGO,
+    TELA_MORTE
+} TelaJogo;
 
 Monstro monstros[MAX_MONSTROS] = {0};
 int quantidadeMonstros = 0;
@@ -282,7 +292,7 @@ static void DesenhaVida(float vida)
     for (int i = 0; i < CORACOES; i++)
     {
         int x = 10 + i * 30;
-        int y = 420;
+        int y = 350;
 
         DesenhaCoracao(x, y, 24, (Color){ 60, 20, 20, 255 });   // coração vazio (fundo)
 
@@ -368,10 +378,310 @@ bool AtingidoPorSlash(
     return produtoEscalar >= limiteAngulo;
 }
 
+// ============================================================
+//  TELAS DE INÍCIO E MORTE
+// ============================================================
+
+typedef struct {
+    float x, y;
+    float brilho;
+    float fase;
+    float tamanho;
+} Estrela;
+
+static Estrela estrelas[NUM_ESTRELAS];
+static unsigned int sementeVisual = 20261110u;
+
+// Ruído determinístico para as estrelas não mudarem de lugar a cada frame.
+static float RuidoVisual(void)
+{
+    sementeVisual = sementeVisual * 1664525u + 1013904223u;
+    return (float)((sementeVisual >> 8) & 0xFFFFFF) / 16777215.0f;
+}
+
+static void IniciarEstrelas(void)
+{
+    for (int i = 0; i < NUM_ESTRELAS; i++)
+    {
+        estrelas[i].x       = RuidoVisual() * LARGURA_TELA;
+        estrelas[i].y       = RuidoVisual() * (ALTURA_TELA * 0.6f);
+        estrelas[i].brilho  = 0.35f + RuidoVisual() * 0.65f;
+        estrelas[i].fase    = RuidoVisual() * 2.0f * PI;
+        estrelas[i].tamanho = 0.8f + RuidoVisual() * 1.4f;
+    }
+}
+
+static float Limitar01(float valor)
+{
+    if (valor < 0.0f) return 0.0f;
+    if (valor > 1.0f) return 1.0f;
+    return valor;
+}
+
+static void DesenhaTextoCentralizado(const char *texto, float y, float tamanho,
+                                     float espacamento, Color cor)
+{
+    Vector2 medida = MeasureTextEx(GetFontDefault(), texto, tamanho, espacamento);
+    DrawTextEx(GetFontDefault(), texto,
+               (Vector2){ (LARGURA_TELA - medida.x) / 2.0f, y },
+               tamanho, espacamento, cor);
+}
+
+// Título com brilho suave em volta (usado no menu e na tela de morte).
+static void DesenhaTituloComBrilho(const char *texto, float x, float y,
+                                   float tamanho, float espacamento,
+                                   Color cor, float brilho, float alpha)
+{
+    for (int camada = 2; camada >= 1; camada--)
+    {
+        for (int angulo = 0; angulo < 360; angulo += 45)
+        {
+            float rad = angulo * DEG2RAD;
+            Vector2 pos = { x + cosf(rad) * (3.5f * camada),
+                            y + sinf(rad) * (3.5f * camada) };
+            DrawTextEx(GetFontDefault(), texto, pos, tamanho, espacamento,
+                       Fade(cor, alpha * (0.13f * brilho) / camada));
+        }
+    }
+
+    DrawTextEx(GetFontDefault(), texto, (Vector2){ x + 3.0f, y + 4.0f },
+               tamanho, espacamento, Fade(BLACK, 0.8f * alpha));
+    DrawTextEx(GetFontDefault(), texto, (Vector2){ x, y },
+               tamanho, espacamento, Fade(cor, alpha));
+}
+
+static void DesenhaVinheta(Color cor, float forca)
+{
+    for (int i = 0; i < 6; i++)
+    {
+        float margem = i * 20.0f;
+        float alpha  = forca * (0.12f - i * 0.016f);
+        if (alpha <= 0.0f) continue;
+
+        Color c = Fade(cor, alpha);
+        DrawRectangle(0, 0, LARGURA_TELA, (int)margem, c);
+        DrawRectangle(0, ALTURA_TELA - (int)margem, LARGURA_TELA, (int)margem, c);
+        DrawRectangle(0, 0, (int)margem, ALTURA_TELA, c);
+        DrawRectangle(LARGURA_TELA - (int)margem, 0, (int)margem, ALTURA_TELA, c);
+    }
+}
+
+static void DesenhaCeuNoturno(float tempo)
+{
+    DrawRectangleGradientV(0, 0, LARGURA_TELA, ALTURA_TELA,
+                           (Color){ 6, 8, 20, 255 },
+                           (Color){ 30, 8, 18, 255 });
+
+    // Estrelas cintilando
+    for (int i = 0; i < NUM_ESTRELAS; i++)
+    {
+        float cintila = 0.55f + 0.45f * sinf(tempo * 1.7f + estrelas[i].fase);
+        float alpha   = estrelas[i].brilho * cintila;
+        DrawCircleV((Vector2){ estrelas[i].x, estrelas[i].y },
+                    estrelas[i].tamanho,
+                    Fade((Color){ 220, 225, 255, 255 }, alpha));
+    }
+
+    // Lua com halo e crateras
+    Vector2 lua = { LARGURA_TELA - 62.0f, 62.0f };
+    for (int i = 5; i >= 1; i--)
+        DrawCircleV(lua, 30.0f + i * 7.0f,
+                    Fade((Color){ 180, 195, 255, 255 }, 0.022f));
+
+    DrawCircleV(lua, 30.0f, (Color){ 232, 230, 214, 255 });
+    DrawCircleV((Vector2){ lua.x - 9.0f, lua.y - 7.0f }, 6.0f,
+                Fade((Color){ 190, 188, 170, 255 }, 0.8f));
+    DrawCircleV((Vector2){ lua.x + 8.0f, lua.y + 6.0f }, 4.5f,
+                Fade((Color){ 190, 188, 170, 255 }, 0.7f));
+    DrawCircleV((Vector2){ lua.x + 2.0f, lua.y - 14.0f }, 3.0f,
+                Fade((Color){ 190, 188, 170, 255 }, 0.6f));
+
+    // Névoa passando devagar
+    for (int i = 0; i < 4; i++)
+    {
+        float velocidade = 12.0f + i * 5.0f;
+        float x = fmodf(tempo * velocidade + i * 270.0f, LARGURA_TELA + 420.0f) - 210.0f;
+        float y = ALTURA_TELA - 90.0f + i * 13.0f;
+        DrawEllipse((int)x, (int)y, 190.0f, 24.0f,
+                    Fade((Color){ 150, 160, 190, 255 }, 0.06f));
+    }
+
+    // Chão escuro
+    DrawRectangle(0, ALTURA_TELA - 48, LARGURA_TELA, 48, (Color){ 4, 5, 10, 255 });
+}
+
+static void DesenhaPinheiro(float x, float baseY, float altura, Color cor)
+{
+    float largura = altura * 0.52f;
+
+    // Tronco
+    DrawRectangle((int)(x - altura * 0.05f), (int)(baseY - altura * 0.16f),
+                  (int)(altura * 0.10f) + 1, (int)(altura * 0.18f) + 1, cor);
+
+    // Três camadas de folhagem
+    for (int i = 0; i < 3; i++)
+    {
+        float camadaBase = baseY - altura * (0.12f + i * 0.24f);
+        float camadaTopo = baseY - altura * (0.46f + i * 0.24f);
+        float meiaLargura = largura * (0.5f - i * 0.13f);
+
+        DrawTriangle((Vector2){ x - meiaLargura, camadaBase },
+                     (Vector2){ x + meiaLargura, camadaBase },
+                     (Vector2){ x, camadaTopo },
+                     cor);
+    }
+}
+
+static void DesenhaFlorestaSilhueta(float tempo)
+{
+    Color cor = (Color){ 3, 4, 8, 255 };
+
+    for (int i = 0; i < 14; i++)
+    {
+        float x = 18.0f + i * 62.0f + sinf(tempo * 0.8f + i * 0.7f) * 1.5f;
+        float altura = 70.0f + (float)((i * 37) % 55);
+        float base = ALTURA_TELA - 34.0f + (float)((i * 13) % 8);
+
+        DesenhaPinheiro(x, base, altura, cor);
+    }
+}
+
+static void DesenhaTelaInicio(float tempo)
+{
+    DesenhaCeuNoturno(tempo);
+    DesenhaFlorestaSilhueta(tempo);
+
+    DesenhaTextoCentralizado("UM JOGO DE SOBREVIVÊNCIA", 48.0f, 14.0f, 4.0f,
+                             (Color){ 130, 125, 150, 255 });
+
+    const char *titulo = "SCARY NIGHTS";
+    Vector2 medida = MeasureTextEx(GetFontDefault(), titulo, 76.0f, 6.0f);
+    float tx = (LARGURA_TELA - medida.x) / 2.0f;
+    float pulso = 0.72f + 0.28f * (0.5f + 0.5f * sinf(tempo * 2.4f));
+
+    DesenhaTituloComBrilho(titulo, tx, 82.0f, 76.0f, 6.0f,
+                           (Color){ 214, 28, 40, 255 }, pulso, 1.0f);
+
+    DesenhaTextoCentralizado("SOBREVIVA À NOITE. TEMA O QUE ESPREITA.",
+                             176.0f, 17.0f, 2.0f,
+                             (Color){ 175, 170, 190, 255 });
+
+    // Linha decorativa
+    int linhaY = 212;
+    DrawRectangle(LARGURA_TELA / 2 - 150, linhaY, 110, 2,
+                  Fade((Color){ 190, 30, 40, 255 }, 0.8f));
+    DrawRectangle(LARGURA_TELA / 2 + 40, linhaY, 110, 2,
+                  Fade((Color){ 190, 30, 40, 255 }, 0.8f));
+    DrawCircleV((Vector2){ LARGURA_TELA / 2.0f, linhaY + 1.0f }, 4.0f,
+                (Color){ 214, 28, 40, 255 });
+
+    // Chamada piscando
+    float pisca = 0.45f + 0.55f * (0.5f + 0.5f * sinf(tempo * 3.2f));
+    DesenhaTextoCentralizado("PRESSIONE ENTER PARA COMEÇAR", 246.0f, 24.0f, 3.0f,
+                             Fade((Color){ 240, 235, 225, 255 }, pisca));
+
+    // Caixa de controles
+    DrawRectangleRounded((Rectangle){ 168, 296, 464, 88 }, 0.18f, 8,
+                         Fade((Color){ 8, 8, 14, 255 }, 0.72f));
+    DesenhaTextoCentralizado("WASD / SETAS - MOVER      E - COLETAR",
+                             306.0f, 15.0f, 1.5f,
+                             (Color){ 190, 188, 205, 255 });
+    DesenhaTextoCentralizado("TAB - INVENTÁRIO      C - CRAFTING",
+                             330.0f, 15.0f, 1.5f,
+                             (Color){ 190, 188, 205, 255 });
+    DesenhaTextoCentralizado("ESC - SAIR", 357.0f, 12.0f, 2.0f,
+                             (Color){ 120, 118, 138, 255 });
+
+    DesenhaVinheta(BLACK, 1.0f);
+}
+
+static void DesenhaTelaMorte(float tempoMorte, float tempoRestante, int dia)
+{
+    float entrada = Limitar01(tempoMorte / 0.8f);
+    float pulso   = 0.5f + 0.5f * sinf(tempoMorte * 4.5f);
+
+    DrawRectangleGradientV(0, 0, LARGURA_TELA, ALTURA_TELA,
+                           (Color){ 12, 0, 4, 255 },
+                           (Color){ 44, 2, 8, 255 });
+
+    DesenhaVinheta((Color){ 120, 0, 0, 255 }, 0.9f + 0.35f * pulso);
+
+    // Sangue escorrendo do topo
+    Color sangue = (Color){ 105, 6, 12, 255 };
+    for (int i = 0; i < 9; i++)
+    {
+        float x = 34.0f + i * 90.0f;
+        float comprimento = 22.0f + (float)((i * 47) % 58) +
+                            6.0f * (0.5f + 0.5f * sinf(tempoMorte + i));
+        float largura = 5.0f + (float)((i * 11) % 4);
+        float alturaVisivel = comprimento * entrada;
+
+        DrawRectangle((int)x, 0, (int)largura, (int)alturaVisivel, sangue);
+        DrawCircleV((Vector2){ x + largura / 2.0f, alturaVisivel },
+                    largura * 0.6f, sangue);
+    }
+
+    // Título tremendo nos primeiros instantes
+    float tremor = (1.0f - Limitar01(tempoMorte / 1.4f)) * 5.0f;
+    float ox = sinf(tempoMorte * 67.0f) * tremor;
+    float oy = cosf(tempoMorte * 59.0f) * tremor;
+
+    const char *titulo = "VOCÊ MORREU";
+    Vector2 medida = MeasureTextEx(GetFontDefault(), titulo, 68.0f, 5.0f);
+    float tx = (LARGURA_TELA - medida.x) / 2.0f + ox;
+    float ty = 112.0f + oy;
+
+    DesenhaTituloComBrilho(titulo, tx, ty, 68.0f, 5.0f,
+                           (Color){ 208, 26, 34, 255 },
+                           0.8f + 0.5f * pulso, entrada);
+
+    DesenhaTextoCentralizado("A ILHA NÃO PERDOA.", 200.0f, 17.0f, 3.0f,
+                             Fade((Color){ 160, 150, 165, 255 }, entrada));
+
+    char textoDia[64];
+    snprintf(textoDia, sizeof(textoDia), "DIA ALCANÇADO: %d", dia);
+    DesenhaTextoCentralizado(textoDia, 242.0f, 20.0f, 2.0f,
+                             Fade((Color){ 225, 215, 220, 255 }, entrada));
+
+    DesenhaTextoCentralizado("SEUS ITENS FORAM PERDIDOS", 272.0f, 13.0f, 2.0f,
+                             Fade((Color){ 155, 110, 118, 255 }, entrada));
+
+    // Barra de renascimento
+    float progresso = 1.0f - Limitar01(tempoRestante / DURACAO_TELA_MORTE);
+    DrawRectangleRounded((Rectangle){ 250, 314, 300, 12 }, 1.0f, 8,
+                         Fade((Color){ 40, 10, 14, 255 }, entrada));
+    if (progresso > 0.01f)
+    {
+        DrawRectangleRounded((Rectangle){ 250, 314, 300 * progresso, 12 }, 1.0f, 8,
+                             Fade((Color){ 200, 28, 38, 255 }, entrada));
+    }
+
+    int restantes = (int)ceilf(tempoRestante);
+    if (restantes < 0) restantes = 0;
+    if (restantes > (int)DURACAO_TELA_MORTE) restantes = (int)DURACAO_TELA_MORTE;
+
+    char textoRenascimento[64];
+    snprintf(textoRenascimento, sizeof(textoRenascimento),
+             "RENASCENDO EM %d...", restantes);
+    DesenhaTextoCentralizado(textoRenascimento, 342.0f, 16.0f, 2.0f,
+                             Fade((Color){ 190, 180, 190, 255 }, entrada));
+
+    if (tempoMorte >= 1.0f)
+    {
+        float pisca = 0.4f + 0.6f * (0.5f + 0.5f * sinf(tempoMorte * 3.0f));
+        DesenhaTextoCentralizado("ENTER PARA RENASCER AGORA", 382.0f, 12.0f, 2.0f,
+                                 Fade((Color){ 140, 130, 145, 255 }, pisca * entrada));
+    }
+}
+
 int main(void)
 {
-    InitWindow(LARGURA_TELA, ALTURA_TELA, "Mapa maior que a tela");
+    InitWindow(LARGURA_TELA, ALTURA_TELA, "Scary Nights");
     SetTargetFPS(60);
+
+    Itens_Init();
+
+    IniciarEstrelas();
 
     Vector2 jogador = { MAPA_LARGURA / 2.0f, MAPA_ALTURA / 2.0f };
     float velocidade = 300.0f;
@@ -407,15 +717,29 @@ int main(void)
     // inventory[1] vai representar a Madeira. 
     
 
-    Receita receitaGraveto = {
-        .resultado = ITEM_GRAVETO, .qtdResultado = 1,
-        .ing = { { ITEM_MADEIRA, 2 } }, .totalIng = 1
+    Receita receitasCraft[] = {
+        {
+            .nome = "Graveto",
+            .resultado = ITEM_GRAVETO, .qtdResultado = 1,
+            .ing = { { ITEM_MADEIRA, 2 } }, .totalIng = 1
+        },
+        {
+            .nome = "Espada de Madeira",
+            .resultado = ITEM_ESPADA, .qtdResultado = 1, .tier = TIER_MADEIRA,
+            .ing = { { ITEM_MADEIRA, 2 }, { ITEM_GRAVETO, 1 } }, .totalIng = 2
+        },
+        {
+            .nome = "Espada de Pedra",
+            .resultado = ITEM_ESPADA, .qtdResultado = 1, .tier = TIER_PEDRA,
+            .ing = { { ITEM_PEDRA, 2 }, { ITEM_GRAVETO, 1 } }, .totalIng = 2
+        },
     };
-
-    Receita receitaEspadaPedra = {
-        .resultado = ITEM_ESPADA, .qtdResultado = 1, .tier = TIER_PEDRA,
-        .ing = { { ITEM_PEDRA, 2 }, { ITEM_GRAVETO, 1 } }, .totalIng = 2
-    };
+    int totalReceitas = (int)(sizeof(receitasCraft) / sizeof(receitasCraft[0]));
+    int receitaSelecionada = 0;
+    int craftingAberto = 0;
+    char mensagemCraft[64] = "";
+    float tempoMensagemCraft = 0.0f;
+    Color corMensagemCraft = WHITE;
 
     // --- CARREGAMENTO DE TEXTURAS (Uma única vez aqui) ---
     float tempo_jogo = 0.0f;          // Conta os segundos passados no jogo
@@ -538,9 +862,72 @@ int main(void)
     Recursos *arvoresAtivas = arvores;       // árvores do mapa atual (NULL dentro de casa/caverna)
     int dia = 1;                             // contador de dias
 
+    TelaJogo telaAtual = TELA_INICIO;
+    float tempoTela  = 0.0f;
+    float tempoMorte = 0.0f;
+
     while (!WindowShouldClose())
     {
         float dt = GetFrameTime();
+        tempoTela += dt;
+
+        // --- TELA DE INÍCIO ---
+        if (telaAtual == TELA_INICIO)
+        {
+            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER) || IsKeyPressed(KEY_SPACE))
+            {
+                telaAtual = TELA_JOGO;
+                tempoTela = 0.0f;
+            }
+
+            BeginDrawing();
+                ClearBackground(BLACK);
+                DesenhaTelaInicio(tempoTela);
+            EndDrawing();
+
+            continue;
+        }
+
+        // --- TELA DE MORTE ---
+        if (telaAtual == TELA_MORTE)
+        {
+            tempoMorte += dt;
+
+            if ((tempoMorte >= 1.0f && IsKeyPressed(KEY_ENTER)) ||
+                tempoMorte >= DURACAO_TELA_MORTE)
+            {
+                if (dentro && CarregarMapa(MAPA_ILHA, mapa))
+                {
+                    dentro = 0;
+                    arvoresAtivas = arvores;
+                }
+
+                jogador = inicio;
+                vida = VIDA_JOGADOR;
+
+                // Reinicia a run: volta ao dia 1 e perde todos os itens
+                dia = 1;
+                tempo_jogo = 0.0f;
+                inv = (Inventario){0};
+                invAberto = 0;
+                craftingAberto = 0;
+                receitaSelecionada = 0;
+                mensagemCraft[0] = '\0';
+                tempoMensagemCraft = 0.0f;
+
+                telaAtual = TELA_JOGO;
+                tempoTela = 0.0f;
+            }
+
+            BeginDrawing();
+                ClearBackground(BLACK);
+                DesenhaTelaMorte(tempoMorte, DURACAO_TELA_MORTE - tempoMorte, dia);
+            EndDrawing();
+
+            continue;
+        }
+
+        if (tempoMensagemCraft > 0.0f) tempoMensagemCraft -= dt;
 
         // --- SISTEMA DE HORÁRIO ---
         // tempo_jogo conta os segundos do dia atual; ao completar o ciclo, começa outro dia.
@@ -571,16 +958,29 @@ int main(void)
             }
         }
 
-        // Movimento do jogador
-        Vector2 proximo = jogador;
-        if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) proximo.x += velocidade * dt;
-        if (IsKeyDown(KEY_LEFT)  || IsKeyDown(KEY_A)) proximo.x -= velocidade * dt;
-        if (!ColideComParede(mapa, proximo, 14.0f) && !ColideComRecursos(jogador, proximo, 14.0f, arvoresAtivas)) jogador.x = proximo.x;
+        // Atualiza tempo de invulnerabilidade do jogador
+        if (cooldownDano > 0.0f) {
+            cooldownDano -= dt;
 
-        proximo = jogador;
-        if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S)) proximo.y += velocidade * dt;
-        if (IsKeyDown(KEY_UP)   || IsKeyDown(KEY_W)) proximo.y -= velocidade * dt;
-        if (!ColideComParede(mapa, proximo, 14.0f) && !ColideComRecursos(jogador, proximo, 14.0f, arvoresAtivas)) jogador.y = proximo.y;
+            if (cooldownDano < 0.0f) {
+                cooldownDano = 0.0f;
+            }
+        }
+
+        
+        // Movimento do jogador (bloqueado enquanto o crafting está aberto)
+        Vector2 proximo = jogador;
+        if (!craftingAberto)
+        {
+            if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) proximo.x += velocidade * dt;
+            if (IsKeyDown(KEY_LEFT)  || IsKeyDown(KEY_A)) proximo.x -= velocidade * dt;
+            if (!ColideComParede(mapa, proximo, 14.0f) && !ColideComRecursos(jogador, proximo, 14.0f, arvoresAtivas)) jogador.x = proximo.x;
+
+            proximo = jogador;
+            if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S)) proximo.y += velocidade * dt;
+            if (IsKeyDown(KEY_UP)   || IsKeyDown(KEY_W)) proximo.y -= velocidade * dt;
+            if (!ColideComParede(mapa, proximo, 14.0f) && !ColideComRecursos(jogador, proximo, 14.0f, arvoresAtivas)) jogador.y = proximo.y;
+        }
 
         // Limita o jogador dentro do mapa
         if (jogador.x < 0) jogador.x = 0;
@@ -636,10 +1036,13 @@ int main(void)
 
         // Direção e animação do personagem
         int andando = 0;
-        if (IsKeyDown(KEY_DOWN)  || IsKeyDown(KEY_S)) { direcao = 0; andando = 1; }
-        if (IsKeyDown(KEY_UP)    || IsKeyDown(KEY_W)) { direcao = 3; andando = 1; }
-        if (IsKeyDown(KEY_LEFT)  || IsKeyDown(KEY_A)) { direcao = 1; andando = 1; }
-        if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) { direcao = 2; andando = 1; }
+        if (!craftingAberto)
+        {
+            if (IsKeyDown(KEY_DOWN)  || IsKeyDown(KEY_S)) { direcao = 0; andando = 1; }
+            if (IsKeyDown(KEY_UP)    || IsKeyDown(KEY_W)) { direcao = 3; andando = 1; }
+            if (IsKeyDown(KEY_LEFT)  || IsKeyDown(KEY_A)) { direcao = 1; andando = 1; }
+            if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) { direcao = 2; andando = 1; }
+        }
 
         if (andando)
         {
@@ -758,12 +1161,21 @@ int main(void)
                 }
             }
         }
-                
+                        
         atualiza_recurso(arvores);
 
-        if (IsKeyPressed(KEY_C)) Craftar(&inv, receitaGraveto);
+        // Abre/fecha a interface de crafting (fecha o inventário para não sobrepor)
+        if (IsKeyPressed(KEY_C))
+        {
+            craftingAberto = !craftingAberto;
+            if (craftingAberto) invAberto = 0;
+        }
 
-        if (IsKeyPressed(KEY_TAB)) invAberto = !invAberto;
+        if (IsKeyPressed(KEY_TAB))
+        {
+            invAberto = !invAberto;
+            if (invAberto) craftingAberto = 0;
+        }
         for (int k = 0; k < INV_COLS; k++)
             if (IsKeyPressed(KEY_ONE + k)) inv.selecionado = k;
 
@@ -772,16 +1184,12 @@ int main(void)
         if (naAgua) vida -= DANO_AGUA * dt;
         if (!naAgua && vida < VIDA_JOGADOR) vida += 0.5f * dt;
 
-        // Morreu: volta ao início com a vida cheia
+        // Morreu: mostra a tela de morte antes de renascer
         if (vida <= 0.0f)
         {
-            if (dentro && CarregarMapa(MAPA_ILHA, mapa))
-            {
-                dentro = 0;
-                arvoresAtivas = arvores;
-            }
-            jogador = inicio;
-            vida = VIDA_JOGADOR;
+            vida = 0.0f;
+            telaAtual = TELA_MORTE;
+            tempoMorte = 0.0f;
         }
         //logica de spawn de monstros
         if (isNoite && !dentro){
@@ -1028,17 +1436,43 @@ int main(void)
 
             DesenhaVida(vida);
 
+            int invX = (LARGURA_TELA - INV_LARGURA) / 2;
+
             if (invAberto) {
-                DrawRectangle(156, 111, 488, 228, Fade(BLACK, 0.6f));   // fundo
-                Inv_Draw(&inv, 166, 121, INV_ROWS);                     // grade completa
+                int invY = (ALTURA_TELA - INV_ALTURA) / 2;
+                DrawRectangle(invX - INV_PAD, invY - INV_PAD,
+                            INV_LARGURA + 2 * INV_PAD, INV_ALTURA + 2 * INV_PAD,
+                            Fade(BLACK, 0.6f));
+                Inv_Draw(&inv, invX, invY, INV_ROWS);
             } else {
-                Inv_Draw(&inv, 166, 394, 1);                            // só a hotbar
+                Inv_Draw(&inv, invX, ALTURA_TELA - SLOT_TAM - 10, 1);
+            }
+
+            if (craftingAberto) {
+                int craftou = DesenharCraftingUI(
+                    receitasCraft, totalReceitas, &inv, &receitaSelecionada,
+                    (tempoMensagemCraft > 0.0f) ? mensagemCraft : NULL,
+                    corMensagemCraft
+                );
+
+                if (craftou) {
+                    if (Craftar(&inv, receitasCraft[receitaSelecionada])) {
+                        snprintf(mensagemCraft, sizeof(mensagemCraft),
+                                 "Craftado: %s", receitasCraft[receitaSelecionada].nome);
+                        corMensagemCraft = GREEN;
+                    } else {
+                        snprintf(mensagemCraft, sizeof(mensagemCraft),
+                                 "Faltam ingredientes ou espaco!");
+                        corMensagemCraft = RED;
+                    }
+                    tempoMensagemCraft = 2.0f;
+                }
             }
 
             
-            DrawText("Setas ou WASD para mover", 10, 10, 20, BLACK);
+            DrawText("Setas ou WASD para mover | E: coletar", 10, 10, 18, BLACK);
 
-            DrawText("Pressione C para craftar graveto!", 10, 32, 16,BLACK);
+            DrawText("TAB: inventario | C: crafting", 10, 32, 16, BLACK);
             DrawText(TextFormat("Dia %d | %s %02d:%02d", dia, isNoite ? "Noite" : "Dia", hora, minuto), 545, 10, 20, isNoite ? BLUE : GOLD);
             DrawFPS(10, 40);
         EndDrawing();
@@ -1046,6 +1480,7 @@ int main(void)
 
     // --- DESCARREGAR RECURSOS ---
         // --- DESCARREGAR RECURSOS ---
+    Itens_Unload();
     liberar_recursos(arvores);
     UnloadTexture(personagem);
     UnloadTexture(texArvore);
