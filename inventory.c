@@ -50,6 +50,18 @@ typedef struct {
     Rectangle recorte;
 } Item;
 
+typedef struct {
+    Texture2D textura;
+    Rectangle recorte;
+} Sprite;
+
+// [tipo da ferramenta][tier]; só as ferramentas usam isso
+Sprite spritesFerramenta[ITEM_COUNT][TIER_COUNT];
+
+static const char *tierArquivo[TIER_COUNT] = {
+    "madeira", "pedra", "ferro", "ouro", "diamante", "magnetita"
+};
+
 int tierDamage[TIER_COUNT] = {
     [TIER_MADEIRA]   = 4,
     [TIER_PEDRA]     = 5,
@@ -91,24 +103,41 @@ typedef struct {
 
 Item itens[ITEM_COUNT];
 
+static Sprite CarregarSprite(const char *caminho) {
+    Sprite sp = { 0 };
+    Image img = LoadImage(caminho);
+    if (img.data != NULL) {
+        sp.recorte = GetImageAlphaBorder(img, 0.0f);
+        if (sp.recorte.width <= 0 || sp.recorte.height <= 0)
+            sp.recorte = (Rectangle){ 0, 0, (float)img.width, (float)img.height };
+        sp.textura = LoadTextureFromImage(img);
+        SetTextureFilter(sp.textura, TEXTURE_FILTER_POINT);
+        UnloadImage(img);
+    } else {
+        TraceLog(LOG_WARNING, "Imagem nao carregou: %s", caminho);
+    }
+    return sp;
+}
+
 static Item NovoItem(const char *nome, int max, Color cor, const char *caminho) {
     Item it = { 0 };
     snprintf(it.nome, sizeof(it.nome), "%s", nome);
     it.maxQuantidade = max;
     it.cor = cor;
-
-    Image img = LoadImage(caminho);
-    if (img.data != NULL) {
-        it.recorte = GetImageAlphaBorder(img, 0.0f);
-        if (it.recorte.width <= 0 || it.recorte.height <= 0)
-            it.recorte = (Rectangle){ 0, 0, (float)img.width, (float)img.height };
-        it.textura = LoadTextureFromImage(img);
-        SetTextureFilter(it.textura, TEXTURE_FILTER_POINT);
-        UnloadImage(img);
-    } else {
-        TraceLog(LOG_WARNING, "Imagem nao carregou: %s", caminho);
+    if (caminho != NULL) {               // ferramentas passam NULL
+        Sprite sp = CarregarSprite(caminho);
+        it.textura = sp.textura;
+        it.recorte = sp.recorte;
     }
     return it;
+}
+
+static void CarregarFerramenta(TipoItem tipo, const char *base) {
+    for (int t = 0; t < TIER_COUNT; t++) {
+        char caminho[96];
+        snprintf(caminho, sizeof(caminho), "pictures/%s_%s.png", base, tierArquivo[t]);
+        spritesFerramenta[tipo][t] = CarregarSprite(caminho);
+    }
 }
 
 void Itens_Init(void) {
@@ -120,17 +149,15 @@ void Itens_Init(void) {
     itens[ITEM_OURO]      = NovoItem("Ouro",      MAX_STACK, GOLD,                       "pictures/ouro.png");
     itens[ITEM_DIAMANTE]  = NovoItem("Diamante",  MAX_STACK, SKYBLUE,                    "pictures/diamante.png");
     itens[ITEM_MAGNETITA] = NovoItem("Magnetita", MAX_STACK, DARKGRAY,                   "pictures/magnetita.png");
-    itens[ITEM_ESPADA]    = NovoItem("Espada",    1,         WHITE,                      "pictures/espada.png");
-    itens[ITEM_MACHADO]   = NovoItem("Machado",   1,         WHITE,                      "pictures/machado.png");
-    itens[ITEM_PICARETA]  = NovoItem("Picareta",  1,         WHITE,                      "pictures/picareta.png");
-    itens[ITEM_ESCUDO]    = NovoItem("Escudo",    1,         WHITE,                      "pictures/escudo.png");
+    itens[ITEM_ESPADA]   = NovoItem("Espada",   1, WHITE, NULL);
+    itens[ITEM_MACHADO]  = NovoItem("Machado",  1, WHITE, NULL);
+    itens[ITEM_PICARETA] = NovoItem("Picareta", 1, WHITE, NULL);
+    itens[ITEM_ESCUDO]   = NovoItem("Escudo",   1, WHITE, NULL);
 
-    for (int i = 1; i < ITEM_COUNT; i++) {
-    if (itens[i].textura.id == 0)
-        TraceLog(LOG_WARNING, "Textura nao carregou: %s", itens[i].nome);
-    else
-        SetTextureFilter(itens[i].textura, TEXTURE_FILTER_POINT);
-    }
+    CarregarFerramenta(ITEM_ESPADA,   "espada");
+    CarregarFerramenta(ITEM_MACHADO,  "machado");
+    CarregarFerramenta(ITEM_PICARETA, "picareta");
+    CarregarFerramenta(ITEM_ESCUDO,   "escudo");
 }
 
 int Inv_Add(Inventario *inv, TipoItem id, int amount) {
@@ -170,6 +197,31 @@ int Inv_AddFerramenta(Inventario *inv, TipoItem tipo, TierItem tier) {
     return 0; // inventário cheio
 }
 
+static Sprite ObterSprite(TipoItem tipo, int tier) {
+    if (itens[tipo].maxQuantidade == 1)
+        return spritesFerramenta[tipo][tier];
+    return (Sprite){ itens[tipo].textura, itens[tipo].recorte };
+}
+
+// Desenha o ícone do item centralizado e proporcional dentro de 'caixa'
+void DesenharIcone(TipoItem tipo, int tier, Rectangle caixa) {
+    Sprite sp = ObterSprite(tipo, tier);
+
+    if (sp.textura.id != 0) {
+        Rectangle src = sp.recorte;
+        float maior = src.width > src.height ? src.width : src.height;
+        float escala = caixa.width / maior;
+        float w = src.width * escala;
+        float h = src.height * escala;
+        Rectangle dst = { caixa.x + (caixa.width - w) / 2.0f,
+                          caixa.y + (caixa.height - h) / 2.0f, w, h };
+        DrawTexturePro(sp.textura, src, dst, (Vector2){ 0, 0 }, 0.0f, WHITE);
+    } else {
+        Color cor = itens[tipo].maxQuantidade == 1 ? tierCor[tier] : itens[tipo].cor;
+        DrawRectangleRec(caixa, cor);
+    }
+}
+
 void Inv_Draw(Inventario *inv, int startX, int startY, int linhas) {
     for (int i = 0; i < INV_COLS * linhas; i++) {
         int x = startX + (i % INV_COLS) * SLOT_PASSO;
@@ -179,27 +231,14 @@ void Inv_Draw(Inventario *inv, int startX, int startY, int linhas) {
         DrawRectangle(x, y, SLOT_TAM, SLOT_TAM, DARKGRAY);
         DrawRectangleLines(x, y, SLOT_TAM, SLOT_TAM, i == inv->selecionado ? YELLOW : BLACK);
 
-        if (s.tipo != ITEM_VAZIO) {
-            Texture2D tex = itens[s.tipo].textura;
+    if (s.tipo != ITEM_VAZIO) {
+        DesenharIcone(s.tipo, s.tier,
+                    (Rectangle){ x + ICONE_MARGEM, y + ICONE_MARGEM, ICONE_TAM, ICONE_TAM });
 
-            if (tex.id != 0) {
-                Rectangle src = itens[s.tipo].recorte;
-                float maior = src.width > src.height ? src.width : src.height;
-                float escala = ICONE_TAM / maior;
-                float w = src.width * escala;
-                float h = src.height * escala;
-                Rectangle destino = { x + (SLOT_TAM - w) / 2.0f, y + (SLOT_TAM - h) / 2.0f, w, h };
-                DrawTexturePro(tex, src, destino, (Vector2){ 0, 0 }, 0.0f, WHITE);
-            } else {
-                Color cor = itens[s.tipo].maxQuantidade == 1 ? tierCor[s.tier]
-                                                             : itens[s.tipo].cor;
-                DrawRectangle(x + ICONE_MARGEM, y + ICONE_MARGEM, ICONE_TAM, ICONE_TAM, cor);
-            }
-
-            if (s.quant > 1)
-                DrawText(TextFormat("%d", s.quant),
-                         x + SLOT_TAM - SLOT_TAM / 3, y + SLOT_TAM - SLOT_TAM / 3,
-                         SLOT_TAM / 3, WHITE);
+        if (s.quant > 1)
+            DrawText(TextFormat("%d", s.quant),
+                    x + SLOT_TAM - SLOT_TAM / 3, y + SLOT_TAM - SLOT_TAM / 3,
+                    SLOT_TAM / 3, WHITE);
         }
     }
 }
@@ -223,6 +262,11 @@ int Inv_Remover(Inventario *inv, TipoItem tipo, int qtd) {
     }
     return 1;
 }
+
 void Itens_Unload(void) {
-    for (int i = 1; i < ITEM_COUNT; i++) UnloadTexture(itens[i].textura);
+    for (int i = 1; i < ITEM_COUNT; i++) {
+        UnloadTexture(itens[i].textura);
+        for (int t = 0; t < TIER_COUNT; t++)
+            UnloadTexture(spritesFerramenta[i][t].textura);
+    }
 }
