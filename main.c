@@ -7,7 +7,7 @@
 #include "raymath.h"
 // Ao modificar o codigo, o projeto deve ser recompilado para que as alterações tenham efeito.
 // comando pra fazer isso: gcc main.c -o jogo.exe -I C:\raylib\include -L C:\raylib\lib -lraylib -lopengl32 -lgdi32 -lwinmm
-// certifiqque-se de que o jogo previamente aberto foi fechado antes de recompilar.
+// certifique-se de que o jogo previamente aberto foi fechado antes de recompilar.
 // para executar o jogo, abra o terminal na pasta do projeto e digite: ./jogo.exe
 
 #define LARGURA_TELA 800
@@ -985,9 +985,40 @@ int main(void)
                     );
                 }
 
+                //desehar arvores
                 for (Recursos *a = arvoresAtivas; a != NULL; a = a->proximo)
                 {
                     if (a->posicao.y > jogador.y) DesenhaArvore(texArvore, a);
+                    // Barra de vida da arvore (apenas quando danificada)
+                    if (!a->quebrado && a->vida < a->vida_maxima) {
+
+                        float larguraBarra = 32.0f;
+                        float alturaBarra = 5.0f;
+
+                        float porcentagemVida = (float)a->vida / a->vida_maxima;
+                        porcentagemVida = Clamp(porcentagemVida, 0.0f, 1.0f);
+
+                        float xBarra = a->posicao.x - larguraBarra / 2.0f;
+                        float yBarra = a->posicao.y - 30.0f;
+
+                        // Fundo cinza
+                        DrawRectangle(
+                            (int)xBarra,
+                            (int)yBarra,
+                            (int)larguraBarra,
+                            (int)alturaBarra,
+                            GRAY
+                        );
+
+                        // Preenchimento verde
+                        DrawRectangle(
+                            (int)xBarra,
+                            (int)yBarra,
+                            (int)(larguraBarra * porcentagemVida),
+                            (int)alturaBarra,
+                            GREEN
+                        );
+                    }
                 }
 
             EndMode2D();
