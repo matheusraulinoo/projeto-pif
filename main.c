@@ -691,19 +691,17 @@ int main(void)
     float defesaJogador = 0.0f;
     float cooldownDano = 0.0f;
     const float intervaloDano = 1.0f;
-    
-    // Ferramenta temporária até integrar com o inventário
-    Ferramenta ferramentaAtual = {
-        .tipo = ITEM_MACHADO,
-        .tier = TIER_MADEIRA,
-        .dano = 3,
-        .poderCorte = 1,
-        .poderMineracao = 0,
-        .alcanceSlash = 120.0f,
-        .anguloSlash = 100.0f,
-        .intervaloAtaque = 0.4f,
-        .textura = {0}
-    };
+
+    Inventario inv = {0};
+    int invAberto = 0;
+
+    // Espada de pedra temporária para testes
+    Inv_AddFerramenta(&inv, ITEM_ESPADA, TIER_PEDRA);
+
+    // Inicializa a ferramenta equipada
+    Ferramenta ferramentaAtual = ObterFerramenta(
+        inv.slots[inv.selecionado]
+    );
     
     float cooldownAtaque = 0.0f;
     float timerSlash = 0.0f;
@@ -712,9 +710,6 @@ int main(void)
 
     Vector2 direcaoSlash = {1.0f, 0.0f};
 
-    Inventario inv = {0};
-    int invAberto = 0;
-    // inventory[1] vai representar a Madeira. 
     
 
     Receita receitasCraft[] = {
@@ -1087,7 +1082,9 @@ int main(void)
 
         // Ataque do jogador
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
-            cooldownAtaque <= 0.0f) {
+            cooldownAtaque <= 0.0f &&
+            !invAberto &&
+            !craftingAberto) {
 
             Vector2 mouseMundo = GetScreenToWorld2D(
                 GetMousePosition(),
@@ -1102,6 +1099,7 @@ int main(void)
 
             cooldownAtaque = ferramentaAtual.intervaloAtaque;
             timerSlash = duracaoSlash;
+            bool acertouAlvo = false;
 
             // Verifica todos os monstros
             if (!dentro) {
@@ -1121,6 +1119,7 @@ int main(void)
                         if (dano < 0.0f) dano = 0.0f;
 
                         monstros[i].vida -= dano;
+                        acertouAlvo = true;
 
                         if (monstros[i].vida <= 0.0f) {
                             monstros[i].vida = 0.0f;
@@ -1151,6 +1150,7 @@ int main(void)
                         )) {
     
                             quebrar_recurso(a, ferramentaAtual.poderCorte);
+                            acertouAlvo = true;
     
                             // Mantem a recompensa existente
                             if (a->quebrado) {
@@ -1159,9 +1159,38 @@ int main(void)
                         }
                     }
                 }
+                // Consome durabilidade apenas quando acertar um alvo
+                if (acertouAlvo) {
+        
+                    Slot *slotEquipado = &inv.slots[inv.selecionado];
+        
+                    // Apenas ferramentas possuem durabilidade
+                    if (slotEquipado->tipo == ITEM_ESPADA ||
+                        slotEquipado->tipo == ITEM_MACHADO ||
+                        slotEquipado->tipo == ITEM_PICARETA) {
+        
+                        if (slotEquipado->durability > 0) {
+                            slotEquipado->durability--;
+        
+                            printf("Durabilidade restante: %d\n",
+                                slotEquipado->durability);
+                        }
+        
+                        // Ferramenta quebra quando chega a zero
+                        if (slotEquipado->durability <= 0) {
+                            printf("Ferramenta quebrou!\n");
+        
+                            *slotEquipado = (Slot){0};
+        
+                            // Atualiza imediatamente para ataque desarmado
+                            ferramentaAtual = ObterFerramenta(*slotEquipado);
+                        }
+                    }
+                }
             }
         }
-                        
+        
+
         atualiza_recurso(arvores);
 
         // Abre/fecha a interface de crafting (fecha o inventário para não sobrepor)
@@ -1178,6 +1207,11 @@ int main(void)
         }
         for (int k = 0; k < INV_COLS; k++)
             if (IsKeyPressed(KEY_ONE + k)) inv.selecionado = k;
+
+        // Atualiza a ferramenta equipada conforme o slot selecionado
+        ferramentaAtual = ObterFerramenta(
+            inv.slots[inv.selecionado]
+        );
 
         // Dano contínuo na água (testa o "pé" do personagem)
         int naAgua = (TileEm(mapa, (Vector2){ jogador.x, jogador.y + 12.0f }) == 0);

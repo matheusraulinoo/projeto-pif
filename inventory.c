@@ -1,5 +1,6 @@
 #include "raylib.h"
 #include <stdio.h>
+#include "raymath.h"
 
 #define SLOT_TAM      64
 #define SLOT_GAP      6
@@ -231,14 +232,80 @@ void Inv_Draw(Inventario *inv, int startX, int startY, int linhas) {
         DrawRectangle(x, y, SLOT_TAM, SLOT_TAM, DARKGRAY);
         DrawRectangleLines(x, y, SLOT_TAM, SLOT_TAM, i == inv->selecionado ? YELLOW : BLACK);
 
-    if (s.tipo != ITEM_VAZIO) {
-        DesenharIcone(s.tipo, s.tier,
-                    (Rectangle){ x + ICONE_MARGEM, y + ICONE_MARGEM, ICONE_TAM, ICONE_TAM });
+        if (s.tipo != ITEM_VAZIO) {
 
-        if (s.quant > 1)
-            DrawText(TextFormat("%d", s.quant),
-                    x + SLOT_TAM - SLOT_TAM / 3, y + SLOT_TAM - SLOT_TAM / 3,
-                    SLOT_TAM / 3, WHITE);
+            DesenharIcone(
+                s.tipo,
+                s.tier,
+                (Rectangle){
+                    x + ICONE_MARGEM,
+                    y + ICONE_MARGEM,
+                    ICONE_TAM,
+                    ICONE_TAM
+                }
+            );
+
+            // Barra de durabilidade das ferramentas
+            if (s.tipo == ITEM_ESPADA ||
+                s.tipo == ITEM_MACHADO ||
+                s.tipo == ITEM_PICARETA) {
+
+                if (s.tier >= 0 && s.tier < TIER_COUNT) {
+
+                    int durabilidadeMaxima = tierDurability[s.tier];
+
+                    if (durabilidadeMaxima > 0 &&
+                        s.durability < durabilidadeMaxima) {
+
+                        float porcentagem = (float)s.durability /
+                                            durabilidadeMaxima;
+
+                        porcentagem = Clamp(porcentagem, 0.0f, 1.0f);
+
+                        Color corBarra = GREEN;
+
+                        if (porcentagem <= 0.25f) {
+                            corBarra = RED;
+                        } else if (porcentagem <= 0.5f) {
+                            corBarra = YELLOW;
+                        }
+
+                        int larguraBarra = SLOT_TAM - 10;
+                        int alturaBarra = 4;
+
+                        int xBarra = x + 5;
+                        int yBarra = y + SLOT_TAM - 7;
+
+                        // Fundo
+                        DrawRectangle(
+                            xBarra,
+                            yBarra,
+                            larguraBarra,
+                            alturaBarra,
+                            BLACK
+                        );
+
+                        // Durabilidade restante
+                        DrawRectangle(
+                            xBarra,
+                            yBarra,
+                            (int)(larguraBarra * porcentagem),
+                            alturaBarra,
+                            corBarra
+                        );
+                    }
+                }
+            }
+
+            if (s.quant > 1) {
+                DrawText(
+                    TextFormat("%d", s.quant),
+                    x + SLOT_TAM - SLOT_TAM / 3,
+                    y + SLOT_TAM - SLOT_TAM / 3,
+                    SLOT_TAM / 3,
+                    WHITE
+                );
+            }
         }
     }
 }
@@ -285,3 +352,55 @@ typedef struct {
 
     Texture2D textura;
 } Ferramenta;
+
+Ferramenta ObterFerramenta(Slot slot) {
+
+    Ferramenta f = {
+        .tipo = ITEM_VAZIO,
+        .tier = TIER_MADEIRA,
+        .dano = 1,
+        .poderCorte = 1,
+        .poderMineracao = 0,
+        .alcanceSlash = 60.0f,
+        .anguloSlash = 100.0f,
+        .intervaloAtaque = 0.5f,
+        .textura = {0}
+    };
+
+    if (slot.tipo != ITEM_ESPADA &&
+        slot.tipo != ITEM_MACHADO &&
+        slot.tipo != ITEM_PICARETA) {
+        return f;
+    }
+
+    if (slot.tier < 0 || slot.tier >= TIER_COUNT)
+        return f;
+
+    f.tipo = slot.tipo;
+    f.tier = (TierItem)slot.tier;
+    f.dano = tierDamage[slot.tier];
+    f.alcanceSlash = 120.0f;
+    f.intervaloAtaque = 0.4f;
+
+    switch (slot.tipo) {
+        case ITEM_ESPADA:
+            f.poderCorte = 1;
+            break;
+
+        case ITEM_MACHADO:
+            f.poderCorte = tierDamage[slot.tier];
+            break;
+
+        case ITEM_PICARETA:
+            f.poderCorte = 0;
+            f.poderMineracao = tierDamage[slot.tier];
+            break;
+
+        default:
+            break;
+    }
+
+    f.textura = spritesFerramenta[slot.tipo][slot.tier].textura;
+
+    return f;
+}
