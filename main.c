@@ -31,8 +31,8 @@
 
 #define CASA_SPAWN_X (55 * TILE + TILE / 2.0f)
 #define CASA_SPAWN_Y (38 * TILE + TILE / 2.0f)
-#define CAVERNA_SPAWN_X (97 * TILE + TILE / 2.0f)
-#define CAVERNA_SPAWN_Y (20 * TILE + TILE / 2.0f)
+#define CAVERNA_SPAWN_X (96 * TILE + TILE / 2.0f)
+#define CAVERNA_SPAWN_Y (19 * TILE + TILE / 2.0f)
 
 // Sprite do personagem (spritesheet 4x4, frames de 32x32)
 #define SPRITE_TAM      32
@@ -271,7 +271,7 @@ static void DesenhaVida(float vida)
     for (int i = 0; i < CORACOES; i++)
     {
         int x = 10 + i * 30;
-        int y = 420;
+        int y = 350;
 
         DesenhaCoracao(x, y, 24, (Color){ 60, 20, 20, 255 });   // coração vazio (fundo)
 
@@ -628,6 +628,8 @@ int main(void)
 {
     InitWindow(LARGURA_TELA, ALTURA_TELA, "Scary Nights");
     SetTargetFPS(60);
+
+    Itens_Init();
 
     IniciarEstrelas();
 
@@ -1170,11 +1172,16 @@ int main(void)
 
             DesenhaVida(vida);
 
+            int invX = (LARGURA_TELA - INV_LARGURA) / 2;
+
             if (invAberto) {
-                DrawRectangle(156, 111, 488, 228, Fade(BLACK, 0.6f));   // fundo
-                Inv_Draw(&inv, 166, 121, INV_ROWS);                     // grade completa
+                int invY = (ALTURA_TELA - INV_ALTURA) / 2;
+                DrawRectangle(invX - INV_PAD, invY - INV_PAD,
+                            INV_LARGURA + 2 * INV_PAD, INV_ALTURA + 2 * INV_PAD,
+                            Fade(BLACK, 0.6f));
+                Inv_Draw(&inv, invX, invY, INV_ROWS);
             } else {
-                Inv_Draw(&inv, 166, 394, 1);                            // só a hotbar
+                Inv_Draw(&inv, invX, ALTURA_TELA - SLOT_TAM - 10, 1);
             }
 
             if (craftingAberto) {
@@ -1209,6 +1216,7 @@ int main(void)
 
     // --- DESCARREGAR RECURSOS ---
         // --- DESCARREGAR RECURSOS ---
+    Itens_Unload();
     liberar_recursos(arvores);
     UnloadTexture(personagem);
     UnloadTexture(texArvore);
