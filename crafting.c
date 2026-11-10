@@ -128,11 +128,22 @@ int DesenharCraftingUI(Receita *receitas, int total, Inventario *inv,
         if (i == *selecionada) DrawRectangleLinesEx(linha, 1.5f, YELLOW);
 
         // Ícone do resultado (ferramentas usam a cor do tier)
-        Color corIcone = (itens[r.resultado].maxQuantidade == 1)
-                       ? tierCor[r.tier]
-                       : itens[r.resultado].cor;
-        DrawRectangle((int)linha.x + 8, (int)linha.y + 8, 32, 32, corIcone);
-        DrawRectangleLines((int)linha.x + 8, (int)linha.y + 8, 32, 32, BLACK);
+        Texture2D tex = itens[r.resultado].textura;
+        int ehFerr = itens[r.resultado].maxQuantidade == 1;
+        Rectangle caixa = { linha.x + 8, linha.y + 8, 32, 32 };
+
+        if (tex.id != 0) {
+            Rectangle src = itens[r.resultado].recorte;
+            float maior = src.width > src.height ? src.width : src.height;
+            float escala = 32.0f / maior;
+            float w = src.width * escala, h = src.height * escala;
+            Rectangle dst = { caixa.x + (32 - w) / 2, caixa.y + (32 - h) / 2, w, h };
+            DrawTexturePro(tex, src, dst, (Vector2){0, 0}, 0.0f,
+                        ehFerr ? tierCor[r.tier] : WHITE);
+        } else {
+            DrawRectangleRec(caixa, ehFerr ? tierCor[r.tier] : itens[r.resultado].cor);
+        }
+        DrawRectangleLines((int)caixa.x, (int)caixa.y, 32, 32, BLACK);
 
         // Nome da receita
         const char *nome = r.nome ? r.nome : itens[r.resultado].nome;

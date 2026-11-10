@@ -31,8 +31,8 @@
 
 #define CASA_SPAWN_X (55 * TILE + TILE / 2.0f)
 #define CASA_SPAWN_Y (38 * TILE + TILE / 2.0f)
-#define CAVERNA_SPAWN_X (97 * TILE + TILE / 2.0f)
-#define CAVERNA_SPAWN_Y (20 * TILE + TILE / 2.0f)
+#define CAVERNA_SPAWN_X (96 * TILE + TILE / 2.0f)
+#define CAVERNA_SPAWN_Y (19 * TILE + TILE / 2.0f)
 
 // Sprite do personagem (spritesheet 4x4, frames de 32x32)
 #define SPRITE_TAM      32
