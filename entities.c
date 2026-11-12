@@ -24,7 +24,8 @@ typedef struct {
     float vida_maxima;
     float ataque;
     float defesa;
-
+    
+    const char *nome;
     bool morto;
 } Monstro;
 /*

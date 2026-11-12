@@ -216,6 +216,7 @@ void SpawnMonstro(
             .vida_maxima = 10.0f,
             .ataque = 3.0f,
             .defesa = 0.0f,
+            .nome = "Caranguejo",
             .morto = false
         };
 
@@ -695,8 +696,12 @@ int main(void)
     Inventario inv = {0};
     int invAberto = 0;
 
-    // Espada de pedra temporária para testes
+    // Escudo equipado separadamente da ferramenta principal
+    Slot escudoEquipado = {0};
+
+    // Espada de pedra e escudo temporários para testes
     Inv_AddFerramenta(&inv, ITEM_ESPADA, TIER_PEDRA);
+    Inv_AddFerramenta(&inv, ITEM_ESCUDO, TIER_PEDRA);
 
     // Inicializa a ferramenta equipada
     Ferramenta ferramentaAtual = ObterFerramenta(
@@ -904,6 +909,7 @@ int main(void)
                 dia = 1;
                 tempo_jogo = 0.0f;
                 inv = (Inventario){0};
+                escudoEquipado = (Slot){0};
                 invAberto = 0;
                 craftingAberto = 0;
                 receitaSelecionada = 0;
@@ -1167,7 +1173,8 @@ int main(void)
                     // Apenas ferramentas possuem durabilidade
                     if (slotEquipado->tipo == ITEM_ESPADA ||
                         slotEquipado->tipo == ITEM_MACHADO ||
-                        slotEquipado->tipo == ITEM_PICARETA) {
+                        slotEquipado->tipo == ITEM_PICARETA ||
+                        slotEquipado->tipo == ITEM_ESCUDO) {
         
                         if (slotEquipado->durability > 0) {
                             slotEquipado->durability--;
@@ -1212,6 +1219,36 @@ int main(void)
         ferramentaAtual = ObterFerramenta(
             inv.slots[inv.selecionado]
         );
+        // Equipar ou desequipar escudo com H
+        if (IsKeyPressed(KEY_H) && !craftingAberto) {
+
+            Slot *selecionado = &inv.slots[inv.selecionado];
+
+            if (selecionado->tipo == ITEM_ESCUDO) {
+
+                // Troca o escudo selecionado pelo equipado
+                Slot temporario = escudoEquipado;
+                escudoEquipado = *selecionado;
+                *selecionado = temporario;
+
+            } else if (escudoEquipado.tipo == ITEM_ESCUDO &&
+                    selecionado->tipo == ITEM_VAZIO) {
+
+                // Devolve o escudo equipado ao slot vazio
+                *selecionado = escudoEquipado;
+                escudoEquipado = (Slot){0};
+            }
+        }
+        
+        defesaJogador = 0.0f;
+
+        if (escudoEquipado.tipo == ITEM_ESCUDO &&
+            escudoEquipado.tier >= 0 &&
+            escudoEquipado.tier < TIER_COUNT) {
+
+            // Valor inicial de balanceamento
+            defesaJogador = 1.0f + escudoEquipado.tier;
+        }
 
         // Dano contínuo na água (testa o "pé" do personagem)
         int naAgua = (TileEm(mapa, (Vector2){ jogador.x, jogador.y + 12.0f }) == 0);
@@ -1276,6 +1313,23 @@ int main(void)
 
                     if (dano < 0.0f) {
                         dano = 0.0f;
+                    }
+
+                    // Desgasta o escudo quando ele bloqueia dano
+                    if (escudoEquipado.tipo == ITEM_ESCUDO &&
+                        monstros[i].ataque > 0.0f &&
+                        defesaJogador > 0.0f) {
+
+                        if (escudoEquipado.durability > 0) {
+                            escudoEquipado.durability--;
+                        }
+
+                        if (escudoEquipado.durability <= 0) {
+                            printf("Escudo quebrou!\n");
+
+                            escudoEquipado = (Slot){0};
+                            defesaJogador = 0.0f;
+                        }
                     }
 
                     vida -= dano;
@@ -1408,6 +1462,22 @@ int main(void)
                         (int)alturaBarra,
                         RED
                     );
+                    
+                    // Nome do monstro acima da barra de vida
+                    const char *nomeMonstro = monstros[i].nome != NULL
+                        ? monstros[i].nome
+                        : "Monstro";
+
+                    int tamanhoFonte = 12;
+                    int larguraNome = MeasureText(nomeMonstro, tamanhoFonte);
+
+                    DrawText(
+                        nomeMonstro,
+                        (int)(monstros[i].posicao.x - larguraNome / 2),
+                        (int)(monstros[i].posicao.y - 38),
+                        tamanhoFonte,
+                        WHITE
+                    );
                 }
 
                 if (timerSlash > 0.0f) {
@@ -1470,6 +1540,55 @@ int main(void)
 
             DesenhaVida(vida);
 
+            // Slot visual do escudo equipado
+            int escudoX = 10;
+            int escudoY = ALTURA_TELA - SLOT_TAM - 10;
+
+            // Desenha o escudo equipado
+            if (escudoEquipado.tipo == ITEM_ESCUDO) {
+                DesenharIcone(
+                    escudoEquipado.tipo,
+                    escudoEquipado.tier,
+                    (Rectangle){
+                        escudoX + ICONE_MARGEM,
+                        escudoY + ICONE_MARGEM,
+                        ICONE_TAM,
+                        ICONE_TAM
+                    }
+                );
+                // Barra de durabilidade do escudo
+                int durabilidadeMaxima = tierDurability[escudoEquipado.tier];
+
+                if (durabilidadeMaxima > 0 &&
+                    escudoEquipado.durability < durabilidadeMaxima) {
+
+                    float porcentagem = (float) escudoEquipado.durability / durabilidadeMaxima;
+
+                    porcentagem = Clamp(porcentagem, 0.0f, 1.0f);
+
+                    Color corBarra = GREEN;
+
+                    if (porcentagem <= 0.25f) {
+                        corBarra = RED;
+                    } else if (porcentagem <= 0.5f) {
+                        corBarra = YELLOW;
+                    }
+
+                    int larguraBarra = SLOT_TAM - 10;
+                    int alturaBarra = 4;
+
+                    int xBarra = escudoX + 5;
+                    int yBarra = escudoY + SLOT_TAM - 7;
+
+                    DrawRectangle(xBarra, yBarra,
+                                larguraBarra, alturaBarra, BLACK);
+
+                    DrawRectangle(xBarra, yBarra,
+                                (int)(larguraBarra * porcentagem),
+                                alturaBarra, corBarra);
+                }
+            }
+
             int invX = (LARGURA_TELA - INV_LARGURA) / 2;
 
             if (invAberto) {
@@ -1481,6 +1600,13 @@ int main(void)
             } else {
                 Inv_Draw(&inv, invX, ALTURA_TELA - SLOT_TAM - 10, 1);
             }
+
+            DrawText(
+                TextFormat("Escudo: %s | Defesa: %.0f",
+                    escudoEquipado.tipo == ITEM_ESCUDO ? "Equipado" : "Nenhum",
+                    defesaJogador),
+                10, 75, 16, WHITE
+            );
 
             if (craftingAberto) {
                 int craftou = DesenharCraftingUI(

@@ -248,7 +248,8 @@ void Inv_Draw(Inventario *inv, int startX, int startY, int linhas) {
             // Barra de durabilidade das ferramentas
             if (s.tipo == ITEM_ESPADA ||
                 s.tipo == ITEM_MACHADO ||
-                s.tipo == ITEM_PICARETA) {
+                s.tipo == ITEM_PICARETA ||
+                s.tipo == ITEM_ESCUDO) {
 
                 if (s.tier >= 0 && s.tier < TIER_COUNT) {
 
