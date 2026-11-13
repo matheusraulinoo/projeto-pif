@@ -350,6 +350,7 @@ typedef struct {
     float alcanceSlash;
     float anguloSlash;
     float intervaloAtaque;
+    float duracaoAnimacao;
 
     Texture2D textura;
 } Ferramenta;
@@ -365,6 +366,7 @@ Ferramenta ObterFerramenta(Slot slot) {
         .alcanceSlash = 60.0f,
         .anguloSlash = 100.0f,
         .intervaloAtaque = 0.5f,
+        .duracaoAnimacao = 0.15f,
         .textura = {0}
     };
 
@@ -385,20 +387,32 @@ Ferramenta ObterFerramenta(Slot slot) {
 
     switch (slot.tipo) {
         case ITEM_ESPADA:
-            f.poderCorte = 1;
+            f.poderCorte = 0;
+            f.duracaoAnimacao = 0.15f;
             break;
 
         case ITEM_MACHADO:
             f.poderCorte = tierDamage[slot.tier];
+            f.duracaoAnimacao = 0.25f;
             break;
 
         case ITEM_PICARETA:
             f.poderCorte = 0;
             f.poderMineracao = tierDamage[slot.tier];
+            f.duracaoAnimacao = 0.2f;
             break;
 
         default:
             break;
+    }
+    // Aumenta o alcance conforme o tier da ferramenta
+    if (f.tipo == ITEM_ESPADA ||
+        f.tipo == ITEM_MACHADO ||
+        f.tipo == ITEM_PICARETA) {
+
+        f.alcanceSlash *= 1.0f + 0.10f * f.tier;
+        f.anguloSlash *= 1.0f + 0.10f * f.tier;
+        f.intervaloAtaque *= 1.0f - 0.10f * f.tier;
     }
 
     f.textura = spritesFerramenta[slot.tipo][slot.tier].textura;

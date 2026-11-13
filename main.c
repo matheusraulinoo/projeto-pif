@@ -776,19 +776,26 @@ int main(void)
     Slot escudoEquipado = {0};
 
     /*
-    // Espada de pedra e escudo temporários para testes
+    // Kit inicial para testes
     Inv_AddFerramenta(&inv, ITEM_ESPADA, TIER_PEDRA);
+    Inv_AddFerramenta(&inv, ITEM_ESPADA, TIER_FERRO);
     Inv_AddFerramenta(&inv, ITEM_ESCUDO, TIER_PEDRA);
+    Inv_AddFerramenta(&inv, ITEM_ESCUDO, TIER_MAGNETITA);
+    Inv_AddFerramenta(&inv, ITEM_PICARETA, TIER_OURO);
+    Inv_AddFerramenta(&inv, ITEM_MACHADO, TIER_DIAMANTE);
+    Inv_AddFerramenta(&inv, ITEM_ESPADA, TIER_MAGNETITA);
     */
-   
+
     // Inicializa a ferramenta equipada
     Ferramenta ferramentaAtual = ObterFerramenta(
         inv.slots[inv.selecionado]
     );
+    // Ferramenta usada na animacao atual (por que pode ser que a ferramenta quebre ou o jogador mude o slot)
+    Ferramenta ferramentaAnimacao = ferramentaAtual;
     
     float cooldownAtaque = 0.0f;
     float timerSlash = 0.0f;
-    const float duracaoSlash = 0.15f;
+    float duracaoSlash = 0.15f;
 
 
     Vector2 direcaoSlash = {1.0f, 0.0f};
@@ -1166,7 +1173,8 @@ int main(void)
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
             cooldownAtaque <= 0.0f &&
             !invAberto &&
-            !craftingAberto) {
+            !craftingAberto &&
+            timerSlash <= 0.0f) {
 
             Vector2 mouseMundo = GetScreenToWorld2D(
                 GetMousePosition(),
@@ -1180,7 +1188,12 @@ int main(void)
             }
 
             cooldownAtaque = ferramentaAtual.intervaloAtaque;
+            ferramentaAnimacao = ferramentaAtual;
+            
+            // Duracao visual depende da ferramenta usada
+            duracaoSlash = ferramentaAnimacao.duracaoAnimacao;
             timerSlash = duracaoSlash;
+
             bool acertouAlvo = false;
 
             // Verifica todos os monstros
@@ -1594,21 +1607,118 @@ int main(void)
                     );
                 }
 
+                // Animacao visual do slash
                 if (timerSlash > 0.0f) {
+
+                    // Progresso da animacao: 0 = inicio, 1 = fim
+                    float progresso = 1.0f - timerSlash / duracaoSlash;
+                    progresso = Clamp(progresso, 0.0f, 1.0f);
 
                     float anguloCentral = atan2f(
                         direcaoSlash.y,
                         direcaoSlash.x
                     ) * RAD2DEG;
 
-                    DrawCircleSector(
-                        jogador,
-                        ferramentaAtual.alcanceSlash,
-                        anguloCentral - ferramentaAtual.anguloSlash / 2.0f,
-                        anguloCentral + ferramentaAtual.anguloSlash / 2.0f,
-                        24,
-                        (Color){255, 230, 100, 110}
+                    // Arco percorre o angulo do ataque
+                    float anguloAtual = anguloCentral
+                        - ferramentaAnimacao.anguloSlash / 2.0f
+                        + ferramentaAnimacao.anguloSlash * progresso;
+
+                    float larguraArco = ferramentaAnimacao.anguloSlash * 0.15f;
+                    float raioExterno = ferramentaAnimacao.alcanceSlash; // * 0.65f;
+                    float raioInterno = 14.0f; //raioExterno - 8.0f;
+
+                    // Cor do slash acompanha o tier da ferramenta
+                    Color corBase;
+
+                    switch (ferramentaAnimacao.tier){
+                        case TIER_FERRO:
+                            corBase = (Color) {255, 255, 255, 150}; //branco
+                            break;
+
+                        case TIER_OURO:
+                            corBase = (Color) {255, 234, 0, 200}; //amarelo mais transparente
+                            break;
+
+                        case TIER_DIAMANTE:
+                            corBase = (Color) {0, 234, 255, 200}; //azul claro
+                            break;
+
+                        case TIER_MAGNETITA:
+                            corBase = (Color) {150, 100, 255, 230}; //roxo //(Color) {255, 255, 0, 200}; //amarelo
+                            break;
+
+                        default:
+                            
+                            corBase = (Color) {255, 255, 255, 50}; //branco mais transparente
+                    }
+
+                    Color corSlash = Fade(
+                        corBase,
+                        (corBase.a / 255.0f) * (1.0f - progresso)
                     );
+
+                    // Faixa curva do ataque
+                    DrawRing(
+                        jogador,
+                        raioInterno,
+                        raioExterno,
+                        anguloAtual - larguraArco,
+                        anguloAtual + larguraArco,
+                        16,
+                        corSlash
+                    );
+
+                    // Animacao da ferramenta equipada
+                    if (ferramentaAnimacao.tipo == ITEM_ESPADA ||
+                        ferramentaAnimacao.tipo == ITEM_MACHADO ||
+                        ferramentaAnimacao.tipo == ITEM_PICARETA) {
+
+                        Sprite sp = spritesFerramenta
+                            [ferramentaAnimacao.tipo]
+                            [ferramentaAnimacao.tier];
+
+                        if (sp.textura.id != 0) {
+
+                            // Mesmo angulo usado pelo efeito de slash
+                            float anguloFerramenta = anguloAtual;
+
+                            // Posiciona a ferramenta no meio do alcance do slash
+                            float distancia = (raioInterno + raioExterno) / 2.0f;
+
+                            float rad = anguloFerramenta * DEG2RAD;
+
+                            Vector2 posFerramenta = {
+                                jogador.x + cosf(rad) * distancia,
+                                jogador.y + sinf(rad) * distancia
+                            };
+
+                            // Dimensoes visuais independentes do alcance do ataque
+                            float tamanho = 40.0f;
+
+                            Rectangle destinoFerramenta = {
+                                posFerramenta.x,
+                                posFerramenta.y,
+                                tamanho,
+                                tamanho
+                            };
+
+                            // Ponto de rotacao no centro inferior da imagem
+                            Vector2 origemFerramenta = {
+                                tamanho / 2.0f,
+                                tamanho / 2.0f
+                            };
+
+                            DrawTexturePro(
+                                sp.textura,
+                                sp.recorte,
+                                destinoFerramenta,
+                                origemFerramenta,
+                                anguloFerramenta + 45.0f,
+                                WHITE
+                            );
+                        }
+                    }
                 }
 
                 //desehar arvores
