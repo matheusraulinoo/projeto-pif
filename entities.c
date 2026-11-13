@@ -14,7 +14,16 @@ typedef struct Recursos {
     struct Recursos *proximo; // Ponteiro para o próximo recurso na lista
 }Recursos;
 
+// Tipos de monstros disponíveis
+typedef enum {
+    MONSTRO_SLIME,
+    MONSTRO_ESQUELETO,
+    MONSTRO_CARANGUEJO,
+    TOTAL_TIPOS_MONSTRO
+} TipoMonstro;
+
 typedef struct {
+    TipoMonstro tipo;
     Vector2 posicao;
     float velocidade;
     int nivel; //isso aqui é pra usar na progressão do jogo depois

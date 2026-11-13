@@ -207,16 +207,58 @@ void SpawnMonstro(
         // Não permite que monstros nasçam sobre recursos.
         if (SobrepoeRecurso(pos, 12.0f, arvores)) continue;
 
-        // Posição válida: cria o monstro
+        // Escolhe aleatoriamente o tipo de monstro
+        int sorteio = GetRandomValue(1, 100);
+        TipoMonstro tipo;
+
+        if (sorteio <= 60) {
+            tipo = MONSTRO_SLIME;
+        } else if (sorteio <= 85) {
+            tipo = MONSTRO_ESQUELETO;
+        } else {
+            tipo = MONSTRO_CARANGUEJO;
+        }
+
+        // Define os atributos conforme o tipo
+        float vida = 10.0f;
+        float ataque = 3.0f;
+        float defesa = 0.0f;
+        float velocidade = 100.0f;
+        const char *nome = "Slime";
+
+        switch (tipo) {
+            case MONSTRO_ESQUELETO:
+                vida = 25.0f;
+                ataque = 6.0f;
+                defesa = 2.0f;
+                velocidade = 70.0f;
+                nome = "Esqueleto";
+                break;
+
+            case MONSTRO_CARANGUEJO:
+                vida = 7.0f;
+                ataque = 2.0f;
+                defesa = 0.0f;
+                velocidade = 160.0f;
+                nome = "Caranguejo";
+                break;
+
+            case MONSTRO_SLIME:
+            default:
+                break;
+        }
+
+        // Cria o monstro com os atributos definidos
         monstros[slot] = (Monstro){
+            .tipo = tipo,
             .posicao = pos,
-            .velocidade = 100.0f,
+            .velocidade = velocidade,
             .nivel = 1,
-            .vida = 10.0f,
-            .vida_maxima = 10.0f,
-            .ataque = 3.0f,
-            .defesa = 0.0f,
-            .nome = "Caranguejo",
+            .vida = vida,
+            .vida_maxima = vida,
+            .ataque = ataque,
+            .defesa = defesa,
+            .nome = nome,
             .morto = false
         };
 
@@ -691,6 +733,7 @@ int main(void)
 
     float defesaJogador = 0.0f;
     float cooldownDano = 0.0f;
+    float cooldownEscudo = 0.0f;
     const float intervaloDano = 1.0f;
 
     Inventario inv = {0};
@@ -765,16 +808,11 @@ int main(void)
 
     if (!CarregarMapa(MAPA_ILHA, mapa)) return 1;
 
-    printf("Arquivo existe: %d\n", FileExists("pictures/carangueijo.png"));
-
-    Texture2D texturaMonstro = LoadTexture("pictures/carangueijo.png");
-
-    if (!IsTextureValid(texturaMonstro)) {
-        printf("ERRO: Nao foi possivel carregar a textura do monstro!\n");
-    } else {
-        printf("Textura carregada com sucesso! Tamanho: %d x %d\n",
-            texturaMonstro.width, texturaMonstro.height);
-    }
+    Texture2D texturaMonstro = LoadTexture("pictures/slime.png");
+    // Texturas temporarias dos diferentes monstros
+    Texture2D texturaSlime = texturaMonstro;
+    Texture2D texturaEsqueleto = LoadTexture("pictures/esqueleto.png");
+    Texture2D texturaCaranguejo = LoadTexture("pictures/caranguejo.png");
 
     Recursos *arvores = NULL;
     Recursos *pedras = NULL;
@@ -947,7 +985,7 @@ int main(void)
 
         // 00:00 = escuridão máxima, 12:00 = claridade máxima.
         float angulo_dia = (hora_frac / 24.0f) * 2.0f * PI;
-        float intensidade_noite = (cosf(angulo_dia) + 1.0f) * 0.5f * ESCURIDAO_MAXIMA;
+        float intensidade_noite = 0.5f; //temporario para testar, o original é: (cosf(angulo_dia) + 1.0f) * 0.5f * ESCURIDAO_MAXIMA;
         bool isNoite = intensidade_noite > 0.4f;
 
         // Atualiza tempo de invulnerabilidade do jogador
@@ -967,8 +1005,13 @@ int main(void)
                 cooldownDano = 0.0f;
             }
         }
-
-        
+        // Atualiza o tempo pra o escudo perder durabilidade
+        if (cooldownEscudo > 0.0f){
+            cooldownEscudo -= dt;
+            if (cooldownDano < 0.0f) {
+                cooldownDano = 0.0f;
+            }
+        }
         // Movimento do jogador (bloqueado enquanto o crafting está aberto)
         Vector2 proximo = jogador;
         if (!craftingAberto)
@@ -1318,10 +1361,12 @@ int main(void)
                     // Desgasta o escudo quando ele bloqueia dano
                     if (escudoEquipado.tipo == ITEM_ESCUDO &&
                         monstros[i].ataque > 0.0f &&
-                        defesaJogador > 0.0f) {
+                        defesaJogador > 0.0f &&
+                        cooldownEscudo <= 0.0f){
 
                         if (escudoEquipado.durability > 0) {
                             escudoEquipado.durability--;
+                            cooldownEscudo = intervaloDano;
                         }
 
                         if (escudoEquipado.durability <= 0) {
@@ -1332,9 +1377,11 @@ int main(void)
                         }
                     }
 
-                    vida -= dano;
-
-                    cooldownDano = intervaloDano;
+                    // Aplica dano e invencibilidade apenas se houver perda de vida
+                    if (dano > 0.0f) {
+                        vida -= dano;
+                        cooldownDano = intervaloDano;
+                    }
 
                     printf("Monstro atacou! Dano: %.1f | Vida: %.1f\n",
                         dano, vida);
@@ -1408,14 +1455,30 @@ int main(void)
                 DrawTexturePro(personagem, origem, destino, centro, 0.0f, corJogador);
                 
                 // 4. Y-SORTING PARTE 2: Desenha as árvores que estão na FRENTE do jogador
-                // Monstros
+                // Renderiza Monstros
                 for (int i = 0; i < quantidadeMonstros; i++) {
                     if (monstros[i].morto) continue;
 
+                    // Seleciona a textura conforme o tipo de monstro
+                    Texture2D texturaAtual = texturaSlime;
+
+                    switch (monstros[i].tipo) {
+                        case MONSTRO_ESQUELETO:
+                            texturaAtual = texturaEsqueleto;
+                            break;
+                        case MONSTRO_CARANGUEJO:
+                            texturaAtual = texturaCaranguejo;
+                            break;
+                        case MONSTRO_SLIME:
+                        default:
+                            texturaAtual = texturaSlime;
+                            break;
+                    }
+
                     Rectangle origem = {
                         0, 0,
-                        (float)texturaMonstro.width,
-                        (float)texturaMonstro.height
+                        (float)texturaAtual.width,
+                        (float)texturaAtual.height
                     };
 
                     Rectangle destino = {
@@ -1428,7 +1491,7 @@ int main(void)
                     Vector2 centro = {16.0f, 16.0f};
 
                     DrawTexturePro(
-                        texturaMonstro,
+                        texturaAtual,
                         origem,
                         destino,
                         centro,
@@ -1462,7 +1525,7 @@ int main(void)
                         (int)alturaBarra,
                         RED
                     );
-                    
+
                     // Nome do monstro acima da barra de vida
                     const char *nomeMonstro = monstros[i].nome != NULL
                         ? monstros[i].nome
@@ -1645,6 +1708,8 @@ int main(void)
     UnloadTexture(personagem);
     UnloadTexture(texArvore);
     UnloadTexture(texturaMonstro);
+    UnloadTexture(texturaEsqueleto);
+    UnloadTexture(texturaCaranguejo);
     CloseWindow();
     return 0;
 }
