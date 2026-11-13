@@ -14,17 +14,26 @@ typedef struct Recursos {
     struct Recursos *proximo; // Ponteiro para o próximo recurso na lista
 }Recursos;
 
+// Tipos de monstros disponíveis
+typedef enum {
+    MONSTRO_SLIME,
+    MONSTRO_ESQUELETO,
+    MONSTRO_CARANGUEJO,
+    TOTAL_TIPOS_MONSTRO
+} TipoMonstro;
+
 typedef struct {
+    TipoMonstro tipo;
     Vector2 posicao;
     float velocidade;
-    int nivel; //isso aqui é pra usar na progressão do jogo depois
-    //eu gosto muito do jeito que risk of rain faz spawn de monstro, se vcs quiserem me perguntar sobre dps eu explico
+    bool elite;
 
     float vida;
     float vida_maxima;
     float ataque;
     float defesa;
-
+    
+    const char *nome;
     bool morto;
 } Monstro;
 /*

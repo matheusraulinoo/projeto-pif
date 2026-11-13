@@ -7,7 +7,7 @@
 #include "raymath.h"
 // Ao modificar o codigo, o projeto deve ser recompilado para que as alterações tenham efeito.
 // comando pra fazer isso: gcc main.c -o jogo.exe -I C:\raylib\include -L C:\raylib\lib -lraylib -lopengl32 -lgdi32 -lwinmm
-// certifiqque-se de que o jogo previamente aberto foi fechado antes de recompilar.
+// certifique-se de que o jogo previamente aberto foi fechado antes de recompilar.
 // para executar o jogo, abra o terminal na pasta do projeto e digite: ./jogo.exe
 
 #define LARGURA_TELA 800
@@ -81,7 +81,7 @@ int quantidadeMonstros = 0;
 
 
 float timerSpawn = 0.0f;
-float intervaloSpawn = 2.0f; // um monstro a cada 2 segundos
+float intervaloSpawn = 5.0f; // um monstro a cada 2 segundos
 
 static int ColideComParede(char mapa[LINHAS][COLS], Vector2 centro, float raio)
 {
@@ -153,10 +153,28 @@ void SpawnMonstro(
     int *quantidadeMonstros,
     Vector2 jogador,
     char mapa[LINHAS][COLS],
-    Recursos *arvores
+    Recursos *arvores,
+    int dia
 ) {
-    if (*quantidadeMonstros >= MAX_MONSTROS) return;
+    int slot = -1;
 
+    // Procura um espaço ocupado por um monstro morto
+    for (int i = 0; i < *quantidadeMonstros; i++) {
+        if (monstros[i].morto) {
+            slot = i;
+            break;
+        }
+    }
+
+    // Se não encontrou um monstro morto, usa um novo espaço
+    if (slot == -1) {
+        if (*quantidadeMonstros >= MAX_MONSTROS) {
+            return;
+        }
+
+        slot = *quantidadeMonstros;
+    }
+    
     for (int tentativa = 0; tentativa < 100; tentativa++) {
 
         // Escolhe uma posição aleatória entre -20 e +20 tiles
@@ -185,24 +203,103 @@ void SpawnMonstro(
         if (TileEm(mapa, pos) == 0) continue;
 
         // Verifica colisão com paredes
-        if (ColideComParede(mapa, pos, 12.0f)) continue;
+        if (ColideComParede(mapa, pos, 18.0f)) continue;
 
         // Não permite que monstros nasçam sobre recursos.
-        if (SobrepoeRecurso(pos, 12.0f, arvores)) continue;
+        if (SobrepoeRecurso(pos, 18.0f, arvores)) continue;
 
-        // Posição válida: cria o monstro
-        monstros[*quantidadeMonstros] = (Monstro){
+        // Probabilidades de spawn mudam conforme os dias
+        // (slime caranguejo e esqueleto comecam em 60% 25% 15% e vão até 20% 45% 35%)
+        int progresso = dia - 1;
+
+        // Limita a progressao ao dia 21
+        if (progresso > 20) {
+            progresso = 20;
+        }
+
+        int chanceSlime = 60 - 2 * progresso;
+        int chanceEsqueleto = 25 + progresso;
+
+        // caranguejo recebe a probabilidade restante
+        int sorteio = GetRandomValue(1, 100);
+        TipoMonstro tipo;
+
+        if (sorteio <= chanceSlime) {
+            tipo = MONSTRO_SLIME;
+        } else if (sorteio <= chanceSlime + chanceEsqueleto) {
+            tipo = MONSTRO_ESQUELETO;
+        } else {
+            tipo = MONSTRO_CARANGUEJO;
+        }
+
+        // Define os atributos conforme o tipo do monstro
+        float vida = 10.0f;
+        float ataque = 3.0f;
+        float defesa = 0.0f;
+        float velocidade = 100.0f;
+        const char *nome = "Slime";
+
+        switch (tipo) {
+            case MONSTRO_ESQUELETO:
+                vida = 25.0f;
+                ataque = 6.0f;
+                defesa = 2.0f;
+                velocidade = 70.0f;
+                nome = "Esqueleto";
+                break;
+
+            case MONSTRO_CARANGUEJO:
+                vida = 7.0f;
+                ataque = 2.0f;
+                defesa = 0.0f;
+                velocidade = 160.0f;
+                nome = "Caranguejo";
+                break;
+
+            case MONSTRO_SLIME:
+            default:
+                break;
+        }
+
+        // Escala atributos conforme o dia atual
+        float multiplicadorVida = 1.0f + 0.10f * (dia - 1);
+        float multiplicadorAtaque = 1.0f + 0.05f * (dia - 1);
+
+        vida *= multiplicadorVida;
+        ataque *= multiplicadorAtaque;
+
+        // Chance de elite aumenta com os dias, ate 30%
+        int chanceElite = 5 + 2 * (dia - 1);
+        if (chanceElite > 30) chanceElite = 30;
+
+        bool elite = GetRandomValue(1, 100) <= chanceElite;
+
+        // Modificadores dos monstros elite
+        if (elite) {
+            vida *= 2.0f;
+            ataque *= 1.5f;
+            velocidade *= 0.8f;
+        }
+
+        // Cria o monstro com os atributos definidos
+        monstros[slot] = (Monstro){
+            .tipo = tipo,
             .posicao = pos,
-            .velocidade = 100.0f,
-            .nivel = 1,
-            .vida = 10.0f,
-            .vida_maxima = 10.0f,
-            .ataque = 3.0f,
-            .defesa = 0.0f,
+            .velocidade = velocidade,
+            .elite = elite,
+            .vida = vida,
+            .vida_maxima = vida,
+            .ataque = ataque,
+            .defesa = defesa,
+            .nome = nome,
             .morto = false
         };
 
-        (*quantidadeMonstros)++;
+        // Incrementa somente se utilizamos um slot novo
+        if (slot == *quantidadeMonstros) {
+            (*quantidadeMonstros)++;
+        }
+
         return;
     }
 }
@@ -307,7 +404,7 @@ void MoverMonstro(
     float passo = monstro->velocidade * dt;
     if (passo > distancia) passo = distancia;
 
-    float raio = 12.0f;
+    float raio = monstro->elite ? 18.0f : 12.0f;
 
     // Movimento horizontal
     Vector2 proximo = monstro->posicao;
@@ -326,6 +423,35 @@ void MoverMonstro(
         !ColideComRecursos(monstro->posicao, proximo, raio, arvores)) {
         monstro->posicao.y = proximo.y;
     }
+}
+
+bool AtingidoPorSlash(
+    Vector2 jogador,
+    Vector2 alvo,
+    Vector2 direcaoSlash,
+    float alcance,
+    float angulo,
+    float raioAlvo
+) {
+    Vector2 diferenca = Vector2Subtract(alvo, jogador);
+    float distancia = Vector2Length(diferenca);
+
+    // Fora do alcance
+    if (distancia > alcance + raioAlvo) return false;
+
+    // Muito próximo: sempre atingido
+    if (distancia < 0.001f) return true;
+
+    Vector2 direcaoAlvo = Vector2Normalize(diferenca);
+
+    float produtoEscalar = Vector2DotProduct(
+        direcaoSlash,
+        direcaoAlvo
+    );
+
+    float limiteAngulo = cosf((angulo / 2.0f) * DEG2RAD);
+
+    return produtoEscalar >= limiteAngulo;
 }
 
 // ============================================================
@@ -638,9 +764,42 @@ int main(void)
     float vida = VIDA_JOGADOR;
     Vector2 inicio = jogador;     // ponto de renascimento
 
+    float defesaJogador = 0.0f;
+    float cooldownDano = 0.0f;
+    float cooldownEscudo = 0.0f;
+    const float intervaloDano = 1.0f;
+
     Inventario inv = {0};
     int invAberto = 0;
-    // inventory[1] vai representar a Madeira. 
+
+    // Escudo equipado separadamente da ferramenta principal
+    Slot escudoEquipado = {0};
+
+    /*
+    // Kit inicial para testes
+    Inv_AddFerramenta(&inv, ITEM_ESPADA, TIER_PEDRA);
+    Inv_AddFerramenta(&inv, ITEM_ESPADA, TIER_FERRO);
+    Inv_AddFerramenta(&inv, ITEM_ESCUDO, TIER_PEDRA);
+    Inv_AddFerramenta(&inv, ITEM_ESCUDO, TIER_MAGNETITA);
+    Inv_AddFerramenta(&inv, ITEM_PICARETA, TIER_OURO);
+    Inv_AddFerramenta(&inv, ITEM_MACHADO, TIER_DIAMANTE);
+    Inv_AddFerramenta(&inv, ITEM_ESPADA, TIER_MAGNETITA);
+    */
+
+    // Inicializa a ferramenta equipada
+    Ferramenta ferramentaAtual = ObterFerramenta(
+        inv.slots[inv.selecionado]
+    );
+    // Ferramenta usada na animacao atual (por que pode ser que a ferramenta quebre ou o jogador mude o slot)
+    Ferramenta ferramentaAnimacao = ferramentaAtual;
+    
+    float cooldownAtaque = 0.0f;
+    float timerSlash = 0.0f;
+    float duracaoSlash = 0.15f;
+
+
+    Vector2 direcaoSlash = {1.0f, 0.0f};
+
     
 
     Receita receitasCraft[] = {
@@ -691,16 +850,11 @@ int main(void)
 
     if (!CarregarMapa(MAPA_ILHA, mapa)) return 1;
 
-    printf("Arquivo existe: %d\n", FileExists("pictures/carangueijo.png"));
-
-    Texture2D texturaMonstro = LoadTexture("pictures/carangueijo.png");
-
-    if (!IsTextureValid(texturaMonstro)) {
-        printf("ERRO: Nao foi possivel carregar a textura do monstro!\n");
-    } else {
-        printf("Textura carregada com sucesso! Tamanho: %d x %d\n",
-            texturaMonstro.width, texturaMonstro.height);
-    }
+    Texture2D texturaMonstro = LoadTexture("pictures/slime.png");
+    // Texturas temporarias dos diferentes monstros
+    Texture2D texturaSlime = texturaMonstro;
+    Texture2D texturaEsqueleto = LoadTexture("pictures/esqueleto.png");
+    Texture2D texturaCaranguejo = LoadTexture("pictures/caranguejo.png");
 
     Recursos *arvores = NULL;
     Recursos *pedras = NULL;
@@ -835,6 +989,7 @@ int main(void)
                 dia = 1;
                 tempo_jogo = 0.0f;
                 inv = (Inventario){0};
+                escudoEquipado = (Slot){0};
                 invAberto = 0;
                 craftingAberto = 0;
                 receitaSelecionada = 0;
@@ -862,6 +1017,13 @@ int main(void)
         {
             tempo_jogo -= duracao_dia_noite;
             dia++;
+
+            // Diminui o intervalo de spawn conforme os dias passam
+            intervaloSpawn = 5.0f - 0.3f * (dia - 1);
+
+            if (intervaloSpawn < 1.0f) {
+                intervaloSpawn = 1.0f;
+            }
         }
 
         // O ciclo começa às 06:00 e avança 24h em duracao_dia_noite segundos.
@@ -875,6 +1037,21 @@ int main(void)
         float intensidade_noite = (cosf(angulo_dia) + 1.0f) * 0.5f * ESCURIDAO_MAXIMA;
         bool isNoite = intensidade_noite > 0.4f;
 
+        // Atualiza tempo de invulnerabilidade do jogador
+        if (cooldownDano > 0.0f) {
+            cooldownDano -= dt;
+
+            if (cooldownDano < 0.0f) {
+                cooldownDano = 0.0f;
+            }
+        }
+        // Atualiza o tempo pra o escudo perder durabilidade
+        if (cooldownEscudo > 0.0f){
+            cooldownEscudo -= dt;
+            if (cooldownEscudo < 0.0f) {
+                cooldownEscudo = 0.0f;
+            }
+        }
         // Movimento do jogador (bloqueado enquanto o crafting está aberto)
         Vector2 proximo = jogador;
         if (!craftingAberto)
@@ -981,24 +1158,136 @@ int main(void)
         if (camera.target.x > MAPA_LARGURA - metadeL) camera.target.x = MAPA_LARGURA - metadeL;
         if (camera.target.y > MAPA_ALTURA  - metadeA) camera.target.y = MAPA_ALTURA  - metadeA;
 
-                atualiza_recurso(arvores);
+        // Atualiza timers de ataque
+        if (cooldownAtaque > 0.0f) {
+            cooldownAtaque -= dt;
+            if (cooldownAtaque < 0.0f) cooldownAtaque = 0.0f;
+        }
 
-        if (!craftingAberto && IsKeyPressed(KEY_E))
-        {
-            for (Recursos *a = arvoresAtivas; a != NULL; a = a->proximo)
-            {
-                if (a->quebrado) continue;
+        if (timerSlash > 0.0f) {
+            timerSlash -= dt;
+            if (timerSlash < 0.0f) timerSlash = 0.0f;
+        }
 
-                float dx = jogador.x - a->posicao.x;
-                float dy = jogador.y - a->posicao.y;
-                if (dx * dx + dy * dy < 50.0f * 50.0f)   // alcance de 50 px
-                {
-                    quebrar_recurso(a, 1);
-                    if (a->quebrado) Inv_Add(&inv, ITEM_MADEIRA, 1);   // ganha madeira ao derrubar
-                    break;                                // só uma árvore por golpe
+        // Ataque do jogador
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
+            cooldownAtaque <= 0.0f &&
+            !invAberto &&
+            !craftingAberto &&
+            timerSlash <= 0.0f) {
+
+            Vector2 mouseMundo = GetScreenToWorld2D(
+                GetMousePosition(),
+                camera
+            );
+
+            Vector2 direcao = Vector2Subtract(mouseMundo, jogador);
+
+            if (Vector2LengthSqr(direcao) > 0.001f) {
+                direcaoSlash = Vector2Normalize(direcao);
+            }
+
+            cooldownAtaque = ferramentaAtual.intervaloAtaque;
+            ferramentaAnimacao = ferramentaAtual;
+            
+            // Duracao visual depende da ferramenta usada
+            duracaoSlash = ferramentaAnimacao.duracaoAnimacao;
+            timerSlash = duracaoSlash;
+
+            bool acertouAlvo = false;
+
+            // Verifica todos os monstros
+            if (!dentro) {
+                for (int i = 0; i < quantidadeMonstros; i++) {
+                    if (monstros[i].morto) continue;
+
+                    if (AtingidoPorSlash(
+                        jogador,
+                        monstros[i].posicao,
+                        direcaoSlash,
+                        ferramentaAtual.alcanceSlash,
+                        ferramentaAtual.anguloSlash,
+                        monstros[i].elite ? 18.0f : 12.0f
+                    )) {
+
+                        float dano = ferramentaAtual.dano - monstros[i].defesa;
+                        if (dano < 0.0f) dano = 0.0f;
+
+                        monstros[i].vida -= dano;
+                        acertouAlvo = true;
+
+                        if (monstros[i].vida <= 0.0f) {
+                            monstros[i].vida = 0.0f;
+                            monstros[i].morto = true;
+                        }
+                    }
+                }
+                // Corte de arvores com o slash
+                if (ferramentaAtual.poderCorte > 0) {
+    
+                    for (Recursos *a = arvoresAtivas; a != NULL; a = a->proximo) {
+    
+                        if (a->quebrado) continue;
+    
+                        // Usa o centro de colisao do tronco
+                        Vector2 centroArvore = Vector2Add(
+                            a->posicao,
+                            a->offset_colisao
+                        );
+    
+                        if (AtingidoPorSlash(
+                            jogador,
+                            centroArvore,
+                            direcaoSlash,
+                            ferramentaAtual.alcanceSlash,
+                            ferramentaAtual.anguloSlash,
+                            a->raio_colisao
+                        )) {
+    
+                            quebrar_recurso(a, ferramentaAtual.poderCorte);
+                            acertouAlvo = true;
+    
+                            // Mantem a recompensa existente
+                            if (a->quebrado) {
+                                Inv_Add(&inv, ITEM_MADEIRA, 1);
+                            }
+                        }
+                    }
+                }
+                // Consome durabilidade apenas quando acertar um alvo
+                if (acertouAlvo) {
+        
+                    Slot *slotEquipado = &inv.slots[inv.selecionado];
+        
+                    // Apenas ferramentas possuem durabilidade
+                    if (slotEquipado->tipo == ITEM_ESPADA ||
+                        slotEquipado->tipo == ITEM_MACHADO ||
+                        slotEquipado->tipo == ITEM_PICARETA ||
+                        slotEquipado->tipo == ITEM_ESCUDO) {
+        
+                        if (slotEquipado->durability > 0) {
+                            slotEquipado->durability--;
+        
+                            printf("Durabilidade restante: %d\n",
+                                slotEquipado->durability);
+                        }
+        
+                        // Ferramenta quebra quando chega a zero
+                        if (slotEquipado->durability <= 0) {
+                            printf("Ferramenta quebrou!\n");
+        
+                            *slotEquipado = (Slot){0};
+        
+                            // Atualiza imediatamente para ataque desarmado
+                            ferramentaAtual = ObterFerramenta(*slotEquipado);
+                        }
+                    }
                 }
             }
         }
+        
+
+        atualiza_recurso(arvores);
 
         // Abre/fecha a interface de crafting (fecha o inventário para não sobrepor)
         if (IsKeyPressed(KEY_C))
@@ -1015,6 +1304,41 @@ int main(void)
         for (int k = 0; k < INV_COLS; k++)
             if (IsKeyPressed(KEY_ONE + k)) inv.selecionado = k;
 
+        // Atualiza a ferramenta equipada conforme o slot selecionado
+        ferramentaAtual = ObterFerramenta(
+            inv.slots[inv.selecionado]
+        );
+        // Equipar ou desequipar escudo com H
+        if (IsKeyPressed(KEY_H) && !craftingAberto) {
+
+            Slot *selecionado = &inv.slots[inv.selecionado];
+
+            if (selecionado->tipo == ITEM_ESCUDO) {
+
+                // Troca o escudo selecionado pelo equipado
+                Slot temporario = escudoEquipado;
+                escudoEquipado = *selecionado;
+                *selecionado = temporario;
+
+            } else if (escudoEquipado.tipo == ITEM_ESCUDO &&
+                    selecionado->tipo == ITEM_VAZIO) {
+
+                // Devolve o escudo equipado ao slot vazio
+                *selecionado = escudoEquipado;
+                escudoEquipado = (Slot){0};
+            }
+        }
+        
+        defesaJogador = 0.0f;
+
+        if (escudoEquipado.tipo == ITEM_ESCUDO &&
+            escudoEquipado.tier >= 0 &&
+            escudoEquipado.tier < TIER_COUNT) {
+
+            // Valor inicial de balanceamento
+            defesaJogador = 1.0f + escudoEquipado.tier;
+        }
+
         // Dano contínuo na água (testa o "pé" do personagem)
         int naAgua = (TileEm(mapa, (Vector2){ jogador.x, jogador.y + 12.0f }) == 0);
         if (naAgua) vida -= DANO_AGUA * dt;
@@ -1028,7 +1352,7 @@ int main(void)
             tempoMorte = 0.0f;
         }
         //logica de spawn de monstros
-        if (isNoite){
+        if (isNoite && !dentro){
             timerSpawn += dt;
 
             if (timerSpawn >= intervaloSpawn) {
@@ -1041,7 +1365,8 @@ int main(void)
                     &quantidadeMonstros,
                     jogador,
                     mapa,
-                    arvoresAtivas
+                    arvoresAtivas,
+                    dia
                 );
 
                 printf("Quantidade de monstros: %d\n", quantidadeMonstros);
@@ -1055,24 +1380,69 @@ int main(void)
         float danoSol = 2.0f;
         
         //atualiza monstros
-        for (int i = 0; i < quantidadeMonstros; i++) {
-            if (monstros[i].morto) continue;
-            
-            MoverMonstro(
-                &monstros[i],
-                jogador,
-                dt,
-                mapa,
-                arvoresAtivas
-            );
-            
-            //dano de sol
-            if (!isNoite) {
-                monstros[i].vida -= danoSol * dt;
+        if (!dentro){
+            for (int i = 0; i < quantidadeMonstros; i++) {
+                if (monstros[i].morto) continue;
+                
+                MoverMonstro(
+                    &monstros[i],
+                    jogador,
+                    dt,
+                    mapa,
+                    arvoresAtivas
+                );
 
-                if (monstros[i].vida <= 0) {
-                    monstros[i].vida = 0;
-                    monstros[i].morto = true;
+                // Dano por contato com monstro
+                if (cooldownDano <= 0.0f &&
+                    CheckCollisionCircles(
+                        jogador, 14.0f,
+                        monstros[i].posicao,
+                        monstros[i].elite ? 18.0f : 12.0f
+                    )) {
+
+                    float dano = monstros[i].ataque - defesaJogador;
+
+                    if (dano < 0.0f) {
+                        dano = 0.0f;
+                    }
+
+                    // Desgasta o escudo quando ele bloqueia dano
+                    if (escudoEquipado.tipo == ITEM_ESCUDO &&
+                        monstros[i].ataque > 0.0f &&
+                        defesaJogador > 0.0f &&
+                        cooldownEscudo <= 0.0f){
+
+                        if (escudoEquipado.durability > 0) {
+                            escudoEquipado.durability--;
+                            cooldownEscudo = intervaloDano;
+                        }
+
+                        if (escudoEquipado.durability <= 0) {
+                            printf("Escudo quebrou!\n");
+
+                            escudoEquipado = (Slot){0};
+                            defesaJogador = 0.0f;
+                        }
+                    }
+
+                    // Aplica dano e invencibilidade apenas se houver perda de vida
+                    if (dano > 0.0f) {
+                        vida -= dano;
+                        cooldownDano = intervaloDano;
+                    }
+
+                    printf("Monstro atacou! Dano: %.1f | Vida: %.1f\n",
+                        dano, vida);
+                }
+                
+                //dano de sol
+                if (!isNoite) {
+                    monstros[i].vida -= danoSol * dt;
+
+                    if (monstros[i].vida <= 0) {
+                        monstros[i].vida = 0;
+                        monstros[i].morto = true;
+                    }
                 }
             }
         }
@@ -1128,41 +1498,263 @@ int main(void)
                 Rectangle origem  = { frameAtual * (float)SPRITE_TAM, direcao * (float)SPRITE_TAM, SPRITE_TAM, SPRITE_TAM };
                 Rectangle destino = { jogador.x, jogador.y, SPRITE_TAM, SPRITE_TAM };
                 Vector2 centro = { SPRITE_TAM / 2.0f, SPRITE_TAM / 2.0f };
-                DrawTexturePro(personagem, origem, destino, centro, 0.0f, WHITE);
+
+                Color corJogador = cooldownDano > 0.0f ? RED : WHITE;
+                DrawTexturePro(personagem, origem, destino, centro, 0.0f, corJogador);
                 
                 // 4. Y-SORTING PARTE 2: Desenha as árvores que estão na FRENTE do jogador
-                // Monstros
+                // Renderiza Monstros
                 for (int i = 0; i < quantidadeMonstros; i++) {
                     if (monstros[i].morto) continue;
 
+                    // Seleciona a textura conforme o tipo de monstro
+                    Texture2D texturaAtual = texturaSlime;
+
+                    switch (monstros[i].tipo) {
+                        case MONSTRO_ESQUELETO:
+                            texturaAtual = texturaEsqueleto;
+                            break;
+                        case MONSTRO_CARANGUEJO:
+                            texturaAtual = texturaCaranguejo;
+                            break;
+                        case MONSTRO_SLIME:
+                        default:
+                            texturaAtual = texturaSlime;
+                            break;
+                    }
+
                     Rectangle origem = {
                         0, 0,
-                        (float)texturaMonstro.width,
-                        (float)texturaMonstro.height
+                        (float)texturaAtual.width,
+                        (float)texturaAtual.height
                     };
+
+                    // Monstros elite possuem sprites 50% maiores
+                    float tamanho = monstros[i].elite ? 48.0f : 32.0f;
 
                     Rectangle destino = {
                         monstros[i].posicao.x,
                         monstros[i].posicao.y,
-                        32.0f,
-                        32.0f
+                        tamanho,
+                        tamanho
                     };
 
-                    Vector2 centro = {16.0f, 16.0f};
+                    Vector2 centro = {
+                        tamanho / 2.0f,
+                        tamanho / 2.0f
+                    };
 
                     DrawTexturePro(
-                        texturaMonstro,
+                        texturaAtual,
                         origem,
                         destino,
                         centro,
                         0.0f,
+                        monstros[i].elite ? (Color){255, 190, 130, 255} : WHITE
+                    );
+                    // Barra de vida do monstro
+                    float larguraBarra = 32.0f;
+                    float alturaBarra = 5.0f;
+
+                    float porcentagemVida = monstros[i].vida / monstros[i].vida_maxima;
+                    porcentagemVida = Clamp(porcentagemVida, 0.0f, 1.0f);
+
+                    float xBarra = monstros[i].posicao.x - larguraBarra / 2.0f;
+                    float yBarra = monstros[i].posicao.y - 26.0f;
+
+                    // Fundo da barra
+                    DrawRectangle(
+                        (int)xBarra,
+                        (int)yBarra,
+                        (int)larguraBarra,
+                        (int)alturaBarra,
+                        DARKGRAY
+                    );
+
+                    // Parte preenchida
+                    DrawRectangle(
+                        (int)xBarra,
+                        (int)yBarra,
+                        (int)(larguraBarra * porcentagemVida),
+                        (int)alturaBarra,
+                        RED
+                    );
+
+                    // Nome do monstro acima da barra de vida
+                    const char *nomeMonstro = monstros[i].nome != NULL ? monstros[i].nome : "Monstro";
+
+                    char nomeExibido[64];
+
+                    snprintf(
+                        nomeExibido,
+                        sizeof(nomeExibido),
+                        "%s%s",
+                        monstros[i].elite ? "Elite " : "",
+                        nomeMonstro
+                    );
+
+                    nomeMonstro = nomeExibido;
+                    
+                    int tamanhoFonte = 12;
+                    int larguraNome = MeasureText(nomeMonstro, tamanhoFonte);
+
+                    DrawText(
+                        nomeMonstro,
+                        (int)(monstros[i].posicao.x - larguraNome / 2),
+                        (int)(monstros[i].posicao.y - 38),
+                        tamanhoFonte,
                         WHITE
                     );
                 }
 
+                // Animacao visual do slash
+                if (timerSlash > 0.0f) {
+
+                    // Progresso da animacao: 0 = inicio, 1 = fim
+                    float progresso = 1.0f - timerSlash / duracaoSlash;
+                    progresso = Clamp(progresso, 0.0f, 1.0f);
+
+                    float anguloCentral = atan2f(
+                        direcaoSlash.y,
+                        direcaoSlash.x
+                    ) * RAD2DEG;
+
+                    // Arco percorre o angulo do ataque
+                    float anguloAtual = anguloCentral
+                        - ferramentaAnimacao.anguloSlash / 2.0f
+                        + ferramentaAnimacao.anguloSlash * progresso;
+
+                    float larguraArco = ferramentaAnimacao.anguloSlash * 0.15f;
+                    float raioExterno = ferramentaAnimacao.alcanceSlash; // * 0.65f;
+                    float raioInterno = 14.0f; //raioExterno - 8.0f;
+
+                    // Cor do slash acompanha o tier da ferramenta
+                    Color corBase;
+
+                    switch (ferramentaAnimacao.tier){
+                        case TIER_FERRO:
+                            corBase = (Color) {255, 255, 255, 150}; //branco
+                            break;
+
+                        case TIER_OURO:
+                            corBase = (Color) {255, 234, 0, 200}; //amarelo mais transparente
+                            break;
+
+                        case TIER_DIAMANTE:
+                            corBase = (Color) {0, 234, 255, 200}; //azul claro
+                            break;
+
+                        case TIER_MAGNETITA:
+                            corBase = (Color) {150, 100, 255, 230}; //roxo //(Color) {255, 255, 0, 200}; //amarelo
+                            break;
+
+                        default:
+                            
+                            corBase = (Color) {255, 255, 255, 50}; //branco mais transparente
+                    }
+
+                    Color corSlash = Fade(
+                        corBase,
+                        (corBase.a / 255.0f) * (1.0f - progresso)
+                    );
+
+                    // Faixa curva do ataque
+                    DrawRing(
+                        jogador,
+                        raioInterno,
+                        raioExterno,
+                        anguloAtual - larguraArco,
+                        anguloAtual + larguraArco,
+                        16,
+                        corSlash
+                    );
+
+                    // Animacao da ferramenta equipada
+                    if (ferramentaAnimacao.tipo == ITEM_ESPADA ||
+                        ferramentaAnimacao.tipo == ITEM_MACHADO ||
+                        ferramentaAnimacao.tipo == ITEM_PICARETA) {
+
+                        Sprite sp = spritesFerramenta
+                            [ferramentaAnimacao.tipo]
+                            [ferramentaAnimacao.tier];
+
+                        if (sp.textura.id != 0) {
+
+                            // Mesmo angulo usado pelo efeito de slash
+                            float anguloFerramenta = anguloAtual;
+
+                            // Posiciona a ferramenta no meio do alcance do slash
+                            float distancia = (raioInterno + raioExterno) / 2.0f;
+
+                            float rad = anguloFerramenta * DEG2RAD;
+
+                            Vector2 posFerramenta = {
+                                jogador.x + cosf(rad) * distancia,
+                                jogador.y + sinf(rad) * distancia
+                            };
+
+                            // Dimensoes visuais independentes do alcance do ataque
+                            float tamanho = 40.0f;
+
+                            Rectangle destinoFerramenta = {
+                                posFerramenta.x,
+                                posFerramenta.y,
+                                tamanho,
+                                tamanho
+                            };
+
+                            // Ponto de rotacao no centro inferior da imagem
+                            Vector2 origemFerramenta = {
+                                tamanho / 2.0f,
+                                tamanho / 2.0f
+                            };
+
+                            DrawTexturePro(
+                                sp.textura,
+                                sp.recorte,
+                                destinoFerramenta,
+                                origemFerramenta,
+                                anguloFerramenta + 45.0f,
+                                WHITE
+                            );
+                        }
+                    }
+                }
+
+                //desehar arvores
                 for (Recursos *a = arvoresAtivas; a != NULL; a = a->proximo)
                 {
                     if (a->posicao.y > jogador.y) DesenhaArvore(texArvore, a);
+                    // Barra de vida da arvore (apenas quando danificada)
+                    if (!a->quebrado && a->vida < a->vida_maxima) {
+
+                        float larguraBarra = 32.0f;
+                        float alturaBarra = 5.0f;
+
+                        float porcentagemVida = (float)a->vida / a->vida_maxima;
+                        porcentagemVida = Clamp(porcentagemVida, 0.0f, 1.0f);
+
+                        float xBarra = a->posicao.x - larguraBarra / 2.0f;
+                        float yBarra = a->posicao.y - 30.0f;
+
+                        // Fundo cinza
+                        DrawRectangle(
+                            (int)xBarra,
+                            (int)yBarra,
+                            (int)larguraBarra,
+                            (int)alturaBarra,
+                            GRAY
+                        );
+
+                        // Preenchimento verde
+                        DrawRectangle(
+                            (int)xBarra,
+                            (int)yBarra,
+                            (int)(larguraBarra * porcentagemVida),
+                            (int)alturaBarra,
+                            GREEN
+                        );
+                    }
                 }
 
             EndMode2D();
@@ -1171,6 +1763,55 @@ int main(void)
             if (naAgua) DrawRectangle(0, 0, LARGURA_TELA, ALTURA_TELA, Fade(RED, 0.2f));
 
             DesenhaVida(vida);
+
+            // Slot visual do escudo equipado
+            int escudoX = 10;
+            int escudoY = ALTURA_TELA - SLOT_TAM - 10;
+
+            // Desenha o escudo equipado
+            if (escudoEquipado.tipo == ITEM_ESCUDO) {
+                DesenharIcone(
+                    escudoEquipado.tipo,
+                    escudoEquipado.tier,
+                    (Rectangle){
+                        escudoX + ICONE_MARGEM,
+                        escudoY + ICONE_MARGEM,
+                        ICONE_TAM,
+                        ICONE_TAM
+                    }
+                );
+                // Barra de durabilidade do escudo
+                int durabilidadeMaxima = tierDurability[escudoEquipado.tier];
+
+                if (durabilidadeMaxima > 0 &&
+                    escudoEquipado.durability < durabilidadeMaxima) {
+
+                    float porcentagem = (float) escudoEquipado.durability / durabilidadeMaxima;
+
+                    porcentagem = Clamp(porcentagem, 0.0f, 1.0f);
+
+                    Color corBarra = GREEN;
+
+                    if (porcentagem <= 0.25f) {
+                        corBarra = RED;
+                    } else if (porcentagem <= 0.5f) {
+                        corBarra = YELLOW;
+                    }
+
+                    int larguraBarra = SLOT_TAM - 10;
+                    int alturaBarra = 4;
+
+                    int xBarra = escudoX + 5;
+                    int yBarra = escudoY + SLOT_TAM - 7;
+
+                    DrawRectangle(xBarra, yBarra,
+                                larguraBarra, alturaBarra, BLACK);
+
+                    DrawRectangle(xBarra, yBarra,
+                                (int)(larguraBarra * porcentagem),
+                                alturaBarra, corBarra);
+                }
+            }
 
             int invX = (LARGURA_TELA - INV_LARGURA) / 2;
 
@@ -1183,6 +1824,13 @@ int main(void)
             } else {
                 Inv_Draw(&inv, invX, ALTURA_TELA - SLOT_TAM - 10, 1);
             }
+
+            DrawText(
+                TextFormat("Escudo: %s | Defesa: %.0f",
+                    escudoEquipado.tipo == ITEM_ESCUDO ? "Equipado" : "Nenhum",
+                    defesaJogador),
+                10, 75, 16, WHITE
+            );
 
             if (craftingAberto) {
                 int craftou = DesenharCraftingUI(
@@ -1221,6 +1869,8 @@ int main(void)
     UnloadTexture(personagem);
     UnloadTexture(texArvore);
     UnloadTexture(texturaMonstro);
+    UnloadTexture(texturaEsqueleto);
+    UnloadTexture(texturaCaranguejo);
     CloseWindow();
     return 0;
 }
