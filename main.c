@@ -203,18 +203,30 @@ void SpawnMonstro(
         if (TileEm(mapa, pos) == 0) continue;
 
         // Verifica colisão com paredes
-        if (ColideComParede(mapa, pos, 12.0f)) continue;
+        if (ColideComParede(mapa, pos, 18.0f)) continue;
 
         // Não permite que monstros nasçam sobre recursos.
-        if (SobrepoeRecurso(pos, 12.0f, arvores)) continue;
+        if (SobrepoeRecurso(pos, 18.0f, arvores)) continue;
 
-        // Escolhe aleatoriamente o tipo de monstro
+        // Probabilidades de spawn mudam conforme os dias
+        // (slime caranguejo e esqueleto comecam em 60% 25% 15% e vão até 20% 45% 35%)
+        int progresso = dia - 1;
+
+        // Limita a progressao ao dia 21
+        if (progresso > 20) {
+            progresso = 20;
+        }
+
+        int chanceSlime = 60 - 2 * progresso;
+        int chanceEsqueleto = 25 + progresso;
+
+        // caranguejo recebe a probabilidade restante
         int sorteio = GetRandomValue(1, 100);
         TipoMonstro tipo;
 
-        if (sorteio <= 60) {
+        if (sorteio <= chanceSlime) {
             tipo = MONSTRO_SLIME;
-        } else if (sorteio <= 85) {
+        } else if (sorteio <= chanceSlime + chanceEsqueleto) {
             tipo = MONSTRO_ESQUELETO;
         } else {
             tipo = MONSTRO_CARANGUEJO;
