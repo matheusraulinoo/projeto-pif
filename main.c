@@ -81,7 +81,7 @@ int quantidadeMonstros = 0;
 
 
 float timerSpawn = 0.0f;
-float intervaloSpawn = 2.0f; // um monstro a cada 2 segundos
+float intervaloSpawn = 5.0f; // um monstro a cada 2 segundos
 
 static int ColideComParede(char mapa[LINHAS][COLS], Vector2 centro, float raio)
 {
@@ -153,7 +153,8 @@ void SpawnMonstro(
     int *quantidadeMonstros,
     Vector2 jogador,
     char mapa[LINHAS][COLS],
-    Recursos *arvores
+    Recursos *arvores,
+    int dia
 ) {
     int slot = -1;
 
@@ -219,7 +220,7 @@ void SpawnMonstro(
             tipo = MONSTRO_CARANGUEJO;
         }
 
-        // Define os atributos conforme o tipo
+        // Define os atributos conforme o tipo do monstro
         float vida = 10.0f;
         float ataque = 3.0f;
         float defesa = 0.0f;
@@ -248,12 +249,32 @@ void SpawnMonstro(
                 break;
         }
 
+        // Escala atributos conforme o dia atual
+        float multiplicadorVida = 1.0f + 0.10f * (dia - 1);
+        float multiplicadorAtaque = 1.0f + 0.05f * (dia - 1);
+
+        vida *= multiplicadorVida;
+        ataque *= multiplicadorAtaque;
+
+        // Chance de elite aumenta com os dias, ate 30%
+        int chanceElite = 5 + 2 * (dia - 1);
+        if (chanceElite > 30) chanceElite = 30;
+
+        bool elite = GetRandomValue(1, 100) <= chanceElite;
+
+        // Modificadores dos monstros elite
+        if (elite) {
+            vida *= 2.0f;
+            ataque *= 1.5f;
+            velocidade *= 0.8f;
+        }
+
         // Cria o monstro com os atributos definidos
         monstros[slot] = (Monstro){
             .tipo = tipo,
             .posicao = pos,
             .velocidade = velocidade,
-            .nivel = 1,
+            .elite = elite,
             .vida = vida,
             .vida_maxima = vida,
             .ataque = ataque,
@@ -371,7 +392,7 @@ void MoverMonstro(
     float passo = monstro->velocidade * dt;
     if (passo > distancia) passo = distancia;
 
-    float raio = 12.0f;
+    float raio = monstro->elite ? 18.0f : 12.0f;
 
     // Movimento horizontal
     Vector2 proximo = monstro->posicao;
@@ -975,6 +996,13 @@ int main(void)
         {
             tempo_jogo -= duracao_dia_noite;
             dia++;
+
+            // Diminui o intervalo de spawn conforme os dias passam
+            intervaloSpawn = 5.0f - 0.3f * (dia - 1);
+
+            if (intervaloSpawn < 1.0f) {
+                intervaloSpawn = 1.0f;
+            }
         }
 
         // O ciclo começa às 06:00 e avança 24h em duracao_dia_noite segundos.
@@ -1152,7 +1180,7 @@ int main(void)
                         direcaoSlash,
                         ferramentaAtual.alcanceSlash,
                         ferramentaAtual.anguloSlash,
-                        12.0f
+                        monstros[i].elite ? 18.0f : 12.0f
                     )) {
 
                         float dano = ferramentaAtual.dano - monstros[i].defesa;
@@ -1310,7 +1338,8 @@ int main(void)
                     &quantidadeMonstros,
                     jogador,
                     mapa,
-                    arvoresAtivas
+                    arvoresAtivas,
+                    dia
                 );
 
                 printf("Quantidade de monstros: %d\n", quantidadeMonstros);
@@ -1340,7 +1369,8 @@ int main(void)
                 if (cooldownDano <= 0.0f &&
                     CheckCollisionCircles(
                         jogador, 14.0f,
-                        monstros[i].posicao, 12.0f
+                        monstros[i].posicao,
+                        monstros[i].elite ? 18.0f : 12.0f
                     )) {
 
                     float dano = monstros[i].ataque - defesaJogador;
@@ -1472,14 +1502,20 @@ int main(void)
                         (float)texturaAtual.height
                     };
 
+                    // Monstros elite possuem sprites 50% maiores
+                    float tamanho = monstros[i].elite ? 48.0f : 32.0f;
+
                     Rectangle destino = {
                         monstros[i].posicao.x,
                         monstros[i].posicao.y,
-                        32.0f,
-                        32.0f
+                        tamanho,
+                        tamanho
                     };
 
-                    Vector2 centro = {16.0f, 16.0f};
+                    Vector2 centro = {
+                        tamanho / 2.0f,
+                        tamanho / 2.0f
+                    };
 
                     DrawTexturePro(
                         texturaAtual,
@@ -1487,7 +1523,7 @@ int main(void)
                         destino,
                         centro,
                         0.0f,
-                        WHITE
+                        monstros[i].elite ? (Color){255, 190, 130, 255} : WHITE
                     );
                     // Barra de vida do monstro
                     float larguraBarra = 32.0f;
@@ -1518,10 +1554,20 @@ int main(void)
                     );
 
                     // Nome do monstro acima da barra de vida
-                    const char *nomeMonstro = monstros[i].nome != NULL
-                        ? monstros[i].nome
-                        : "Monstro";
+                    const char *nomeMonstro = monstros[i].nome != NULL ? monstros[i].nome : "Monstro";
 
+                    char nomeExibido[64];
+
+                    snprintf(
+                        nomeExibido,
+                        sizeof(nomeExibido),
+                        "%s%s",
+                        monstros[i].elite ? "Elite " : "",
+                        nomeMonstro
+                    );
+
+                    nomeMonstro = nomeExibido;
+                    
                     int tamanhoFonte = 12;
                     int larguraNome = MeasureText(nomeMonstro, tamanhoFonte);
 

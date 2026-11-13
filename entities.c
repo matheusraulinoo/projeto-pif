@@ -26,8 +26,7 @@ typedef struct {
     TipoMonstro tipo;
     Vector2 posicao;
     float velocidade;
-    int nivel; //isso aqui é pra usar na progressão do jogo depois
-    //eu gosto muito do jeito que risk of rain faz spawn de monstro, se vcs quiserem me perguntar sobre dps eu explico
+    bool elite;
 
     float vida;
     float vida_maxima;
