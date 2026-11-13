@@ -775,10 +775,12 @@ int main(void)
     // Escudo equipado separadamente da ferramenta principal
     Slot escudoEquipado = {0};
 
+    /*
     // Espada de pedra e escudo temporários para testes
     Inv_AddFerramenta(&inv, ITEM_ESPADA, TIER_PEDRA);
     Inv_AddFerramenta(&inv, ITEM_ESCUDO, TIER_PEDRA);
-
+    */
+   
     // Inicializa a ferramenta equipada
     Ferramenta ferramentaAtual = ObterFerramenta(
         inv.slots[inv.selecionado]
@@ -1025,7 +1027,7 @@ int main(void)
 
         // 00:00 = escuridão máxima, 12:00 = claridade máxima.
         float angulo_dia = (hora_frac / 24.0f) * 2.0f * PI;
-        float intensidade_noite = 0.5f; //temporario para testar, o original é: (cosf(angulo_dia) + 1.0f) * 0.5f * ESCURIDAO_MAXIMA;
+        float intensidade_noite = (cosf(angulo_dia) + 1.0f) * 0.5f * ESCURIDAO_MAXIMA;
         bool isNoite = intensidade_noite > 0.4f;
 
         // Atualiza tempo de invulnerabilidade do jogador
