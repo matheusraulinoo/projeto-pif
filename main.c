@@ -996,20 +996,11 @@ int main(void)
                 cooldownDano = 0.0f;
             }
         }
-
-        // Atualiza tempo de invulnerabilidade do jogador
-        if (cooldownDano > 0.0f) {
-            cooldownDano -= dt;
-
-            if (cooldownDano < 0.0f) {
-                cooldownDano = 0.0f;
-            }
-        }
         // Atualiza o tempo pra o escudo perder durabilidade
         if (cooldownEscudo > 0.0f){
             cooldownEscudo -= dt;
-            if (cooldownDano < 0.0f) {
-                cooldownDano = 0.0f;
+            if (cooldownEscudo < 0.0f) {
+                cooldownEscudo = 0.0f;
             }
         }
         // Movimento do jogador (bloqueado enquanto o crafting está aberto)
