@@ -9,6 +9,7 @@ typedef struct Recursos {
     int vida;
     int vida_maxima;
     bool quebrado;
+    bool colide_quebrado;
     float tempo_renascimento;
     float cooldown_renascimento;
     struct Recursos *proximo; // Ponteiro para o próximo recurso na lista
@@ -100,4 +101,15 @@ void liberar_recursos(Recursos *cabeca) {
         free(cabeca);
         cabeca = proximo;
     }
+}
+
+static int TemRecursoPerto(Vector2 pos, float distMin, Recursos *lista)
+{
+    for (Recursos *r = lista; r != NULL; r = r->proximo)
+    {
+        float dx = pos.x - r->posicao.x;
+        float dy = pos.y - r->posicao.y;
+        if (dx * dx + dy * dy < distMin * distMin) return 1;
+    }
+    return 0;
 }

@@ -29,10 +29,10 @@
 #define TILE_PORTA_CASA   7
 #define TILE_PORTA_CAVERNA 8
 
-#define CASA_SPAWN_X (55 * TILE + TILE / 2.0f)
+#define CASA_SPAWN_X (52 * TILE + TILE / 2.0f)
 #define CASA_SPAWN_Y (38 * TILE + TILE / 2.0f)
-#define CAVERNA_SPAWN_X (96 * TILE + TILE / 2.0f)
-#define CAVERNA_SPAWN_Y (19 * TILE + TILE / 2.0f)
+#define CAVERNA_SPAWN_X (94 * TILE + TILE / 2.0f)
+#define CAVERNA_SPAWN_Y (71 * TILE + TILE / 2.0f)
 
 // Sprite do personagem (spritesheet 4x4, frames de 32x32)
 #define SPRITE_TAM      32
@@ -44,19 +44,27 @@
 // Arvores
 #define MAX_ARVORES        300
 #define DENSIDADE_ARVORES  8        // % de chance de cada tile 6 virar árvore
-#define DIST_MIN_ARVORES   80.0f   // distância mínima entre árvores (px)
+#define DIST_MIN_ARVORES   100.0f   // distância mínima entre árvores (px)
 #define ESCALA_ARVORE      2.5f 
 #define RAIO_TRONCO        12.0f
 
-#define MAX_PEDRAS        200
-#define DENSIDADE_PEDRAS  5        // % de chance de cada tile 3 virar pedra
-#define DIST_MIN_PEDRAS   80.0f   // distância mínima entre pedras (px)
-#define ESCALA_PEDRA      2.0f
-#define RAIO_PEDRA        12.0f
+#define MAX_PEDRAS        100
+#define DENSIDADE_PEDRAS  5        // % de chance de cada tile 9 virar pedra
+#define DIST_MIN_MINERIO  80.0f   // distância mínima entre minérios (px)
+#define MAX_FERRO          50
+#define DENSIDADE_FERRO     4
+#define MAX_OURO          25
+#define DENSIDADE_OURO     3
+#define MAX_DIAMANTE          10
+#define DENSIDADE_DIAMANTE     2
+#define ESCALA_MINERIO      2.0f
+#define RAIO_MINERIO        12.0f
 
 // Recortes no spritesheet (arvore.png, 74x62)
 #define RECORTE_TOCO   (Rectangle){ 1, 48, 22, 14 }
 #define RECORTE_ARVORE (Rectangle){ 34, 0, 39, 61 }
+#define RECORTE_PEDREGULHO (Rectangle){ 1, 50, 10, 7 }
+#define RECORTE_MINERIO    (Rectangle){ 38, 32, 35, 25 }
 
 #define DANO_AGUA     1.5f       // pontos por segundo (meio coração/s)
 #define MAX_MONSTROS 100
@@ -68,6 +76,13 @@
 // Telas do jogo
 #define DURACAO_TELA_MORTE 4.0f  // segundos na tela de morte antes de renascer
 #define NUM_ESTRELAS       90
+
+#define LAVA_CUSTO 5
+
+int lavaAberta = 0;
+char mensagemLava[64] = "";
+float tempoMensagemLava = 0.0f;
+Color corMensagemLava = WHITE;
 
 typedef enum {
     TELA_INICIO = 0,
@@ -94,8 +109,8 @@ static int ColideComParede(char mapa[LINHAS][COLS], Vector2 centro, float raio)
     {
         for (int x = minX; x <= maxX; x++)
         {
-            // Somente os tiles andaveís (valor 1, 2 e 6) permitem a passagem; fora do mapa também bloqueia.
-            if (x >= 0 && x < COLS && y >= 0 && y < LINHAS && (mapa[y][x] == 0 || mapa[y][x] == 2 || mapa[y][x] == 3 || mapa[y][x] == 1 || mapa[y][x] == 6 || mapa[y][x] == 7 || mapa[y][x] == 8 || mapa[y][x] == 9)) continue;
+            // Somente os tiles andaveís, fora do mapa também bloqueia.
+            if (x >= 0 && x < COLS && y >= 0 && y < LINHAS && (mapa[y][x] == 0 || mapa[y][x] == 6 || mapa[y][x] == 7 || mapa[y][x] == 8 || mapa[y][x] == 9 || mapa[y][x] == 'f' || mapa[y][x] == 'd' || mapa[y][x] == 'e')) continue;
 
             float esquerda = x * TILE;
             float topo = y * TILE;
@@ -114,6 +129,7 @@ static int ColideComRecursos(Vector2 atual, Vector2 proximo, float raio, Recurso
 {
     for (Recursos *recurso = recursos; recurso != NULL; recurso = recurso->proximo)
     {
+        if (recurso->quebrado && !recurso->colide_quebrado) continue;
         if (recurso->raio_colisao <= 0.0f) continue;
 
         Vector2 centro = Vector2Add(recurso->posicao, recurso->offset_colisao);
@@ -304,6 +320,31 @@ void SpawnMonstro(
     }
 }
 
+// Retorna 1 se existe algum tile 'tile' a menos de 'alcance' px do jogador
+static int PertoDeTile(char mapa[LINHAS][COLS], Vector2 pos, char tile, float alcance)
+{
+    int minX = (int)((pos.x - alcance) / TILE);
+    int maxX = (int)((pos.x + alcance) / TILE);
+    int minY = (int)((pos.y - alcance) / TILE);
+    int maxY = (int)((pos.y + alcance) / TILE);
+
+    for (int y = minY; y <= maxY; y++)
+    {
+        for (int x = minX; x <= maxX; x++)
+        {
+            if (x < 0 || x >= COLS || y < 0 || y >= LINHAS) continue;
+            if (mapa[y][x] != tile) continue;
+
+            float esq = x * TILE, topo = y * TILE;
+            float px = pos.x < esq  ? esq  : (pos.x > esq + TILE  ? esq + TILE  : pos.x);
+            float py = pos.y < topo ? topo : (pos.y > topo + TILE ? topo + TILE : pos.y);
+            float dx = pos.x - px, dy = pos.y - py;
+            if (dx * dx + dy * dy <= alcance * alcance) return 1;
+        }
+    }
+    return 0;
+}
+
 int CarregarMapa(const char *caminho, char mapa[LINHAS][COLS])
 {
     FILE *f = fopen(caminho, "r"); //Abre o arquivo para modificar o que deve ser feito (Carregar o mapa).
@@ -333,6 +374,19 @@ static void DesenhaArvore(Texture2D tex, Recursos *r)
 
     float w = src.width  * ESCALA_ARVORE;
     float h = src.height * ESCALA_ARVORE;
+
+    Rectangle dst = { r->posicao.x, r->posicao.y, w, h };
+    Vector2 origem = { w / 2.0f, h };   // base, no centro (já escalado)
+
+    DrawTexturePro(tex, src, dst, origem, 0.0f, WHITE);
+}
+
+static void DesenhaMinerio(Texture2D tex, Recursos *r)
+{
+    Rectangle src = r->quebrado ? RECORTE_PEDREGULHO : RECORTE_MINERIO;
+
+    float w = src.width  * ESCALA_MINERIO;
+    float h = src.height * ESCALA_MINERIO;
 
     Rectangle dst = { r->posicao.x, r->posicao.y, w, h };
     Vector2 origem = { w / 2.0f, h };   // base, no centro (já escalado)
@@ -836,6 +890,18 @@ int main(void)
     Texture2D texArvore = LoadTexture("pictures/arvore.png");
     SetTextureFilter(texArvore, TEXTURE_FILTER_POINT);
 
+    Texture2D texPedra = LoadTexture("pictures/pedra_bruta.png");
+    SetTextureFilter(texPedra, TEXTURE_FILTER_POINT);
+
+    Texture2D texFerro = LoadTexture("pictures/ferro_bruto.png");
+    SetTextureFilter(texFerro, TEXTURE_FILTER_POINT);
+
+    Texture2D texOuro = LoadTexture("pictures/ouro_bruto.png");
+    SetTextureFilter(texOuro, TEXTURE_FILTER_POINT);
+
+    Texture2D texDiamante = LoadTexture("pictures/diamante_bruto.png");
+    SetTextureFilter(texDiamante, TEXTURE_FILTER_POINT);
+
     int frameAtual = 0;
     int direcao = 0;          // 0=baixo, 1=esquerda, 2=direita, 3=cima
     float timerAnim = 0.0f;
@@ -858,8 +924,17 @@ int main(void)
 
     Recursos *arvores = NULL;
     Recursos *pedras = NULL;
+    Recursos *ferros = NULL;
+    Recursos *ouros = NULL;
+    Recursos *diamantes = NULL;
     int numPedras = 0;
     int pedra = 0;
+    int numFerro = 0;
+    int ferro = 0;
+    int numOuro = 0;
+    int ouro = 0;
+    int numDiamante = 0;
+    int diamante = 0;
     int numArvores = 0;
     int madeira = 0;
 
@@ -893,6 +968,7 @@ int main(void)
                 .vida = 3,
                 .vida_maxima = 3,
                 .quebrado = false,
+                .colide_quebrado = true,
                 .tempo_renascimento = 0.0f,
                 .cooldown_renascimento = 10.0f
             });
@@ -900,33 +976,38 @@ int main(void)
         }
     }
 
+    char mapaCaverna[LINHAS][COLS];
+    if (!CarregarMapa(MAPA_CAVERNA, mapaCaverna)) return 1;
+
     for (int ty = 0; ty < LINHAS && numPedras < MAX_PEDRAS; ty++)
     {
         for (int tx = 0; tx < COLS && numPedras < MAX_PEDRAS; tx++)
         {
-            if (mapa[ty][tx] != 3) continue;                      // só nos tiles 3
+            switch (mapaCaverna[ty][tx]) {
+                case 9:
+                case 'd':
+                case 'f':
+                    break;          // tile permitido, segue para o sorteio
+                default:
+                    continue;       // qualquer outro, pula
+            }
             if (GetRandomValue(0, 99) >= DENSIDADE_PEDRAS) continue;
 
             Vector2 pos = { tx * TILE + TILE / 2.0f, ty * TILE + TILE };
 
-            // não nasce em cima do jogador
-            float dx = pos.x - jogador.x, dy = pos.y - jogador.y;
+            // não nasce em cima do ponto de entrada da caverna
+            float dx = pos.x - CAVERNA_SPAWN_X, dy = pos.y - CAVERNA_SPAWN_Y;
             if (dx * dx + dy * dy < 64.0f * 64.0f) continue;
 
-                        // nem colada em outra pedra
-            int perto = 0;
-            for (Recursos *a = pedras; a != NULL; a = a->proximo)
-            {
-                dx = pos.x - a->posicao.x;
-                dy = pos.y - a->posicao.y;
-                if (dx * dx + dy * dy < DIST_MIN_PEDRAS * DIST_MIN_PEDRAS) { perto = 1; break; }
-            }
-            if (perto) continue;
+            if (TemRecursoPerto(pos, DIST_MIN_MINERIO, pedras)   ||
+                TemRecursoPerto(pos, DIST_MIN_MINERIO, ferros)   ||
+                TemRecursoPerto(pos, DIST_MIN_MINERIO, ouros)    ||
+                TemRecursoPerto(pos, DIST_MIN_MINERIO, diamantes)) continue;
 
             inserir_recurso(&pedras, (Recursos){
                 .posicao = pos,
                 .offset_colisao = { 0.0f, -20.0f },
-                .raio_colisao = RAIO_PEDRA,
+                .raio_colisao = RAIO_MINERIO,
                 .vida = 5,
                 .vida_maxima = 5,
                 .quebrado = false,
@@ -936,10 +1017,129 @@ int main(void)
             numPedras++;
         }
     }
+
+    for (int ty = 0; ty < LINHAS && numFerro < MAX_FERRO; ty++)
+    {
+        for (int tx = 0; tx < COLS && numFerro < MAX_FERRO; tx++)
+        {
+            switch (mapaCaverna[ty][tx]) {
+                case 'd':
+                case 'f':
+                case 'e':
+                    break;          // tile permitido, segue para o sorteio
+                default:
+                    continue;       // qualquer outro, pula
+            }
+            if (GetRandomValue(0, 99) >= DENSIDADE_FERRO) continue;
+
+            Vector2 pos = { tx * TILE + TILE / 2.0f, ty * TILE + TILE };
+
+            // não nasce em cima do ponto de entrada da caverna
+            float dx = pos.x - CAVERNA_SPAWN_X, dy = pos.y - CAVERNA_SPAWN_Y;
+            if (dx * dx + dy * dy < 64.0f * 64.0f) continue;
+
+            if (TemRecursoPerto(pos, DIST_MIN_MINERIO, pedras)   ||
+                TemRecursoPerto(pos, DIST_MIN_MINERIO, ferros)   ||
+                TemRecursoPerto(pos, DIST_MIN_MINERIO, ouros)    ||
+                TemRecursoPerto(pos, DIST_MIN_MINERIO, diamantes)) continue;
+
+            inserir_recurso(&ferros, (Recursos){
+                .posicao = pos,
+                .offset_colisao = { 0.0f, -20.0f },
+                .raio_colisao = RAIO_MINERIO,
+                .vida = 7,
+                .vida_maxima = 7,
+                .quebrado = false,
+                .tempo_renascimento = 0.0f,
+                .cooldown_renascimento = 35.0f
+            });
+            numFerro++;
+        }
+    }
+
+    for (int ty = 0; ty < LINHAS && numOuro < MAX_OURO; ty++)
+    {
+        for (int tx = 0; tx < COLS && numOuro < MAX_OURO; tx++)
+        {
+            switch (mapaCaverna[ty][tx]) {
+                case 'f':
+                case 'e':
+                    break;          // tile permitido, segue para o sorteio
+                default:
+                    continue;       // qualquer outro, pula
+            }
+            if (GetRandomValue(0, 99) >= DENSIDADE_OURO) continue;
+
+            Vector2 pos = { tx * TILE + TILE / 2.0f, ty * TILE + TILE };
+
+            // não nasce em cima do ponto de entrada da caverna
+            float dx = pos.x - CAVERNA_SPAWN_X, dy = pos.y - CAVERNA_SPAWN_Y;
+            if (dx * dx + dy * dy < 64.0f * 64.0f) continue;
+
+            if (TemRecursoPerto(pos, DIST_MIN_MINERIO, pedras)   ||
+                TemRecursoPerto(pos, DIST_MIN_MINERIO, ferros)   ||
+                TemRecursoPerto(pos, DIST_MIN_MINERIO, ouros)    ||
+                TemRecursoPerto(pos, DIST_MIN_MINERIO, diamantes)) continue;
+                
+            inserir_recurso(&ouros, (Recursos){
+                .posicao = pos,
+                .offset_colisao = { 0.0f, -20.0f },
+                .raio_colisao = RAIO_MINERIO,
+                .vida = 9,
+                .vida_maxima = 9,
+                .quebrado = false,
+                .tempo_renascimento = 0.0f,
+                .cooldown_renascimento = 40.0f
+            });
+            numOuro++;
+        }
+    }  
+    
+    for (int ty = 0; ty < LINHAS && numDiamante < MAX_DIAMANTE; ty++)
+    {
+        for (int tx = 0; tx < COLS && numDiamante < MAX_DIAMANTE; tx++)
+        {
+            switch (mapaCaverna[ty][tx]) {
+                case 'e':
+                    break;          // tile permitido, segue para o sorteio
+                default:
+                    continue;       // qualquer outro, pula
+            }
+            if (GetRandomValue(0, 99) >= DENSIDADE_DIAMANTE) continue;
+
+            Vector2 pos = { tx * TILE + TILE / 2.0f, ty * TILE + TILE };
+
+            // não nasce em cima do ponto de entrada da caverna
+            float dx = pos.x - CAVERNA_SPAWN_X, dy = pos.y - CAVERNA_SPAWN_Y;
+            if (dx * dx + dy * dy < 64.0f * 64.0f) continue;
+
+            if (TemRecursoPerto(pos, DIST_MIN_MINERIO, pedras)   ||
+                TemRecursoPerto(pos, DIST_MIN_MINERIO, ferros)   ||
+                TemRecursoPerto(pos, DIST_MIN_MINERIO, ouros)    ||
+                TemRecursoPerto(pos, DIST_MIN_MINERIO, diamantes)) continue;
+
+            inserir_recurso(&diamantes, (Recursos){
+                .posicao = pos,
+                .offset_colisao = { 0.0f, -20.0f },
+                .raio_colisao = RAIO_MINERIO,
+                .vida = 11,
+                .vida_maxima = 11,
+                .quebrado = false,
+                .tempo_renascimento = 0.0f,
+                .cooldown_renascimento = 45.0f
+            });
+            numDiamante++;
+        }
+    }
     
     int dentro = 0;                          // 0 = fora, 1 = dentro do local
     Vector2 posAntesDeEntrar = jogador;      // para voltar ao lugar certo ao sair
     Recursos *arvoresAtivas = arvores;       // árvores do mapa atual (NULL dentro de casa/caverna)
+    Recursos *pedrasAtivas = NULL;         // pedras do mapa atual (NULL dentro de casa/ilha)
+    Recursos *ferroAtivos = NULL;         // ferro do mapa atual (NULL dentro de casa/ilha)
+    Recursos *ouroAtivos = NULL;         // ouro do mapa atual (NULL dentro de casa/ilha)
+    Recursos *diamanteAtivos = NULL;         // diamante do mapa atual (NULL dentro de casa/ilha)
+
     int dia = 1;                             // contador de dias
 
     TelaJogo telaAtual = TELA_INICIO;
@@ -980,6 +1180,10 @@ int main(void)
                 {
                     dentro = 0;
                     arvoresAtivas = arvores;
+                    pedrasAtivas = NULL;
+                    ferroAtivos = NULL;
+                    ouroAtivos = NULL;
+                    diamanteAtivos = NULL;
                 }
 
                 jogador = inicio;
@@ -1054,16 +1258,16 @@ int main(void)
         }
         // Movimento do jogador (bloqueado enquanto o crafting está aberto)
         Vector2 proximo = jogador;
-        if (!craftingAberto)
+        if (!craftingAberto && !invAberto && !lavaAberta)
         {
             if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) proximo.x += velocidade * dt;
             if (IsKeyDown(KEY_LEFT)  || IsKeyDown(KEY_A)) proximo.x -= velocidade * dt;
-            if (!ColideComParede(mapa, proximo, 14.0f) && !ColideComRecursos(jogador, proximo, 14.0f, arvoresAtivas)) jogador.x = proximo.x;
+            if (!ColideComParede(mapa, proximo, 14.0f) && !ColideComRecursos(jogador, proximo, 14.0f, arvoresAtivas) && !ColideComRecursos(jogador, proximo, 14.0f, pedrasAtivas) && !ColideComRecursos(jogador, proximo, 14.0f, ferroAtivos) && !ColideComRecursos(jogador, proximo, 14.0f, ouroAtivos) && !ColideComRecursos(jogador, proximo, 14.0f, diamanteAtivos)) jogador.x = proximo.x;
 
             proximo = jogador;
             if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S)) proximo.y += velocidade * dt;
             if (IsKeyDown(KEY_UP)   || IsKeyDown(KEY_W)) proximo.y -= velocidade * dt;
-            if (!ColideComParede(mapa, proximo, 14.0f) && !ColideComRecursos(jogador, proximo, 14.0f, arvoresAtivas)) jogador.y = proximo.y;
+            if (!ColideComParede(mapa, proximo, 14.0f) && !ColideComRecursos(jogador, proximo, 14.0f, arvoresAtivas) && !ColideComRecursos(jogador, proximo, 14.0f, pedrasAtivas) && !ColideComRecursos(jogador, proximo, 14.0f, ferroAtivos) && !ColideComRecursos(jogador, proximo, 14.0f, ouroAtivos) && !ColideComRecursos(jogador, proximo, 14.0f, diamanteAtivos)) jogador.y = proximo.y;
         }
 
         // Limita o jogador dentro do mapa
@@ -1094,7 +1298,11 @@ int main(void)
                     jogador = posAntesDeEntrar;
                 }
             }
-            arvoresAtivas = dentro ? NULL : arvores;
+            arvoresAtivas = NULL;
+            pedrasAtivas = NULL;
+            ferroAtivos = NULL;
+            ouroAtivos = NULL;
+            diamanteAtivos = NULL;
         }
 
         if(TileEm(mapa, jogador) == TILE_PORTA_CAVERNA)
@@ -1116,11 +1324,15 @@ int main(void)
                 }
             }
             arvoresAtivas = dentro ? NULL : arvores;
+            pedrasAtivas = dentro ? pedras : NULL;
+            ferroAtivos = dentro ? ferros : NULL;
+            ouroAtivos = dentro ? ouros : NULL;
+            diamanteAtivos = dentro ? diamantes : NULL;
         }
 
         // Direção e animação do personagem
         int andando = 0;
-        if (!craftingAberto)
+        if (!craftingAberto && !invAberto && !lavaAberta)
         {
             if (IsKeyDown(KEY_DOWN)  || IsKeyDown(KEY_S)) { direcao = 0; andando = 1; }
             if (IsKeyDown(KEY_UP)    || IsKeyDown(KEY_W)) { direcao = 3; andando = 1; }
@@ -1222,7 +1434,7 @@ int main(void)
                         }
                     }
                 }
-                // Corte de arvores com o slash
+            }// Corte de arvores com o slash
                 if (ferramentaAtual.poderCorte > 0) {
     
                     for (Recursos *a = arvoresAtivas; a != NULL; a = a->proximo) {
@@ -1250,6 +1462,122 @@ int main(void)
                             // Mantem a recompensa existente
                             if (a->quebrado) {
                                 Inv_Add(&inv, ITEM_MADEIRA, 1);
+                            }
+                        }
+                    }
+                }
+                if (ferramentaAtual.poderMineracao > 0) {
+                    if (ferramentaAtual.tipo == ITEM_PICARETA){
+                        for (Recursos *a = pedrasAtivas; a != NULL; a = a->proximo) {
+        
+                            if (a->quebrado) continue;
+        
+                            // Usa o centro de colisao do tronco
+                            Vector2 centroPedra = Vector2Add(
+                                a->posicao,
+                                a->offset_colisao
+                            );
+        
+                            if (AtingidoPorSlash(
+                                jogador,
+                                centroPedra,
+                                direcaoSlash,
+                                ferramentaAtual.alcanceSlash,
+                                ferramentaAtual.anguloSlash,
+                                a->raio_colisao
+                            )) {
+        
+                                quebrar_recurso(a, ferramentaAtual.poderMineracao);
+                                acertouAlvo = true;
+        
+                                // Mantem a recompensa existente
+                                if (a->quebrado) {
+                                    Inv_Add(&inv, ITEM_PEDRA, 1);
+                                }
+                            }
+                        }
+                        for (Recursos *a = ferroAtivos; a != NULL; a = a->proximo) {
+        
+                            if (a->quebrado) continue;
+        
+                            // Usa o centro de colisao do tronco
+                            Vector2 centroFerro = Vector2Add(
+                                a->posicao,
+                                a->offset_colisao
+                            );
+        
+                            if (AtingidoPorSlash(
+                                jogador,
+                                centroFerro,
+                                direcaoSlash,
+                                ferramentaAtual.alcanceSlash,
+                                ferramentaAtual.anguloSlash,
+                                a->raio_colisao
+                            )) {
+        
+                                quebrar_recurso(a, ferramentaAtual.poderMineracao);
+                                acertouAlvo = true;
+        
+                                // Mantem a recompensa existente
+                                if (a->quebrado) {
+                                    Inv_Add(&inv, ITEM_FERRO, 1);
+                                }
+                            }
+                        }
+                        for (Recursos *a = ouroAtivos; a != NULL; a = a->proximo) {
+        
+                            if (a->quebrado) continue;
+        
+                            // Usa o centro de colisao do tronco
+                            Vector2 centroOuro = Vector2Add(
+                                a->posicao,
+                                a->offset_colisao
+                            );
+        
+                            if (AtingidoPorSlash(
+                                jogador,
+                                centroOuro,
+                                direcaoSlash,
+                                ferramentaAtual.alcanceSlash,
+                                ferramentaAtual.anguloSlash,
+                                a->raio_colisao
+                            )) {
+        
+                                quebrar_recurso(a, ferramentaAtual.poderMineracao);
+                                acertouAlvo = true;
+        
+                                // Mantem a recompensa existente
+                                if (a->quebrado) {
+                                    Inv_Add(&inv, ITEM_OURO, 1);
+                                }
+                            }
+                        }
+                        for (Recursos *a = diamanteAtivos; a != NULL; a = a->proximo) {
+        
+                            if (a->quebrado) continue;
+        
+                            // Usa o centro de colisao do tronco
+                            Vector2 centroDiamante = Vector2Add(
+                                a->posicao,
+                                a->offset_colisao
+                            );
+        
+                            if (AtingidoPorSlash(
+                                jogador,
+                                centroDiamante,
+                                direcaoSlash,
+                                ferramentaAtual.alcanceSlash,
+                                ferramentaAtual.anguloSlash,
+                                a->raio_colisao
+                            )) {
+        
+                                quebrar_recurso(a, ferramentaAtual.poderMineracao);
+                                acertouAlvo = true;
+        
+                                // Mantem a recompensa existente
+                                if (a->quebrado) {
+                                    Inv_Add(&inv, ITEM_DIAMANTE, 1);
+                                }
                             }
                         }
                     }
@@ -1283,11 +1611,15 @@ int main(void)
                         }
                     }
                 }
-            }
+            
         }
         
 
         atualiza_recurso(arvores);
+        atualiza_recurso(pedras);
+        atualiza_recurso(ferros);
+        atualiza_recurso(ouros);
+        atualiza_recurso(diamantes);
 
         // Abre/fecha a interface de crafting (fecha o inventário para não sobrepor)
         if (IsKeyPressed(KEY_C))
@@ -1301,6 +1633,42 @@ int main(void)
             invAberto = !invAberto;
             if (invAberto) craftingAberto = 0;
         }
+        if (tempoMensagemLava > 0.0f) tempoMensagemLava -= dt;
+
+        int pertoLava = PertoDeTile(mapa, jogador, 'a', 48.0f);
+
+        if (!pertoLava) lavaAberta = 0;   // se afastar, fecha
+
+        if (pertoLava && IsKeyPressed(KEY_F) && !craftingAberto && !invAberto)
+            lavaAberta = !lavaAberta;
+
+        if (lavaAberta && IsKeyPressed(KEY_ENTER))
+        {
+            if (Inv_Contar(&inv, ITEM_DIAMANTE) < LAVA_CUSTO)
+            {
+                snprintf(mensagemLava, sizeof(mensagemLava), "Voce precisa de %d diamantes.", LAVA_CUSTO);
+                corMensagemLava = RED;
+            }
+            else
+            {
+                Inv_Remover(&inv, ITEM_DIAMANTE, LAVA_CUSTO);
+
+                if (Inv_Add(&inv, ITEM_MAGNETITA, 1) > 0)
+                {
+                    // Sem espaço: devolve os diamantes
+                    Inv_Add(&inv, ITEM_DIAMANTE, LAVA_CUSTO);
+                    snprintf(mensagemLava, sizeof(mensagemLava), "Inventario cheio!");
+                    corMensagemLava = RED;
+                }
+                else
+                {
+                    snprintf(mensagemLava, sizeof(mensagemLava), "A lava aceitou! Voce recebeu 1 magnetita.");
+                    corMensagemLava = GREEN;
+                }
+            }
+            tempoMensagemLava = 2.0f;
+        }
+
         for (int k = 0; k < INV_COLS; k++)
             if (IsKeyPressed(KEY_ONE + k)) inv.selecionado = k;
 
@@ -1309,7 +1677,7 @@ int main(void)
             inv.slots[inv.selecionado]
         );
         // Equipar ou desequipar escudo com H
-        if (IsKeyPressed(KEY_H) && !craftingAberto) {
+        if (IsKeyPressed(KEY_H) && !craftingAberto && !invAberto && !lavaAberta) {
 
             Slot *selecionado = &inv.slots[inv.selecionado];
 
@@ -1461,28 +1829,17 @@ int main(void)
                         switch (mapa[y][x])
                         {
                             case 0: cor = BLUE;      break;
-                            case 2: cor = GREEN;     break;
-                            case 1: cor = BEIGE;     break;
                             case 3: cor = DARKGRAY;  break;
                             case 4: cor = LIGHTGRAY; break;
-                            case 5: cor = BROWN;     break;
                             case 6: cor = (Color){ 20, 140, 60, 255 }; break;
-                            case 7: case 8: cor = BLACK;     break;
+                            case 7: cor = BLACK;     break;
+                            case 8: cor = (Color){ 100, 50, 0, 255 }; break;
                             case 9: cor = (Color){ 141, 73, 37, 255 }; break;
                             case 'a': cor = (Color){ 255, 255, 0, 255 }; break;
-                            case 'b': cor = (Color){ 255, 0, 255, 255 }; break;
-                            case 'c': cor = (Color){ 0, 255, 255, 255 }; break;
                             case 'd': cor = (Color){ 255, 128, 0, 255 }; break;
                             case 'e': cor = (Color){ 128, 0, 255, 255 }; break;
                             case 'f': cor = (Color){ 0, 255, 128, 255 }; break;
-                            case 'g': cor = (Color){ 255, 0, 0, 255 };   break;
-                            case 'h': cor = (Color){ 69, 46, 81, 255 };  break;
-                            case 'i': cor = (Color){ 0, 85, 255, 255 };  break;
-                            case 'j': cor = (Color){ 255, 0, 170, 255 }; break;
-                            case 'k': cor = (Color){ 0, 250, 255, 255 }; break;
-                            case 'l': cor = (Color){ 242, 0, 255, 255 }; break;
-                            case 'm': cor = (Color){ 0, 255, 0, 255 };   break;
-                            default: cor = BLACK;    break; 
+                            default: cor = BLACK;    break;
                         }
                         DrawRectangle(x * TILE, y * TILE, TILE, TILE, cor);
                     }
@@ -1492,6 +1849,22 @@ int main(void)
                 for (Recursos *a = arvoresAtivas; a != NULL; a = a->proximo)
                 {
                     if (a->posicao.y <= jogador.y) DesenhaArvore(texArvore, a);
+                }
+                for (Recursos *p = pedrasAtivas; p != NULL; p = p->proximo)
+                {
+                    if (p->posicao.y <= jogador.y) DesenhaMinerio(texPedra, p);
+                }
+                for (Recursos *p = ferroAtivos; p != NULL; p = p->proximo)
+                {
+                    if (p->posicao.y <= jogador.y) DesenhaMinerio(texFerro, p);
+                }
+                for (Recursos *p = ouroAtivos; p != NULL; p = p->proximo)
+                {
+                    if (p->posicao.y <= jogador.y) DesenhaMinerio(texOuro, p);
+                }
+                for (Recursos *p = diamanteAtivos; p != NULL; p = p->proximo)
+                {
+                    if (p->posicao.y <= jogador.y) DesenhaMinerio(texDiamante, p);
                 }
 
                 // 3. DESENHO DO PERSONAGEM
@@ -1756,13 +2129,175 @@ int main(void)
                         );
                     }
                 }
+                for (Recursos *a = pedrasAtivas; a != NULL; a = a->proximo)
+                {
+                    if (a->posicao.y > jogador.y) DesenhaMinerio(texPedra, a);
+                    // Barra de vida da pedra (apenas quando danificada)
+                    if (!a->quebrado && a->vida < a->vida_maxima) {
 
+                        float larguraBarra = 32.0f;
+                        float alturaBarra = 5.0f;
+
+                        float porcentagemVida = (float)a->vida / a->vida_maxima;
+                        porcentagemVida = Clamp(porcentagemVida, 0.0f, 1.0f);
+
+                        float xBarra = a->posicao.x - larguraBarra / 2.0f;
+                        float yBarra = a->posicao.y - 30.0f;
+
+                        // Fundo cinza
+                        DrawRectangle(
+                            (int)xBarra,
+                            (int)yBarra,
+                            (int)larguraBarra,
+                            (int)alturaBarra,
+                            GRAY
+                        );
+
+                        // Preenchimento verde
+                        DrawRectangle(
+                            (int)xBarra,
+                            (int)yBarra,
+                            (int)(larguraBarra * porcentagemVida),
+                            (int)alturaBarra,
+                            GREEN
+                        );
+                    }
+                }
+                for (Recursos *a = ferroAtivos; a != NULL; a = a->proximo)
+                {
+                    if (a->posicao.y > jogador.y) DesenhaMinerio(texFerro, a);
+                    // Barra de vida do ferro (apenas quando danificado)
+                    if (!a->quebrado && a->vida < a->vida_maxima) {
+
+                        float larguraBarra = 32.0f;
+                        float alturaBarra = 5.0f;
+
+                        float porcentagemVida = (float)a->vida / a->vida_maxima;
+                        porcentagemVida = Clamp(porcentagemVida, 0.0f, 1.0f);
+
+                        float xBarra = a->posicao.x - larguraBarra / 2.0f;
+                        float yBarra = a->posicao.y - 30.0f;
+
+                        // Fundo cinza
+                        DrawRectangle(
+                            (int)xBarra,
+                            (int)yBarra,
+                            (int)larguraBarra,
+                            (int)alturaBarra,
+                            GRAY
+                        );
+
+                        // Preenchimento verde
+                        DrawRectangle(
+                            (int)xBarra,
+                            (int)yBarra,
+                            (int)(larguraBarra * porcentagemVida),
+                            (int)alturaBarra,
+                            GREEN
+                        );
+                    }
+                }
+                for (Recursos *a = ouroAtivos; a != NULL; a = a->proximo)
+                {
+                    if (a->posicao.y > jogador.y) DesenhaMinerio(texOuro, a);
+                    // Barra de vida do ouro (apenas quando danificado)
+                    if (!a->quebrado && a->vida < a->vida_maxima) {
+
+                        float larguraBarra = 32.0f;
+                        float alturaBarra = 5.0f;
+
+                        float porcentagemVida = (float)a->vida / a->vida_maxima;
+                        porcentagemVida = Clamp(porcentagemVida, 0.0f, 1.0f);
+
+                        float xBarra = a->posicao.x - larguraBarra / 2.0f;
+                        float yBarra = a->posicao.y - 30.0f;
+
+                        // Fundo cinza
+                        DrawRectangle(
+                            (int)xBarra,
+                            (int)yBarra,
+                            (int)larguraBarra,
+                            (int)alturaBarra,
+                            GRAY
+                        );
+
+                        // Preenchimento verde
+                        DrawRectangle(
+                            (int)xBarra,
+                            (int)yBarra,
+                            (int)(larguraBarra * porcentagemVida),
+                            (int)alturaBarra,
+                            GREEN
+                        );
+                    }
+                }
+                for (Recursos *a = diamanteAtivos; a != NULL; a = a->proximo)
+                {
+                    if (a->posicao.y > jogador.y) DesenhaMinerio(texDiamante, a);
+                    // Barra de vida do diamante (apenas quando danificado)
+                    if (!a->quebrado && a->vida < a->vida_maxima) {
+
+                        float larguraBarra = 32.0f;
+                        float alturaBarra = 5.0f;
+
+                        float porcentagemVida = (float)a->vida / a->vida_maxima;
+                        porcentagemVida = Clamp(porcentagemVida, 0.0f, 1.0f);
+
+                        float xBarra = a->posicao.x - larguraBarra / 2.0f;
+                        float yBarra = a->posicao.y - 30.0f;
+
+                        // Fundo cinza
+                        DrawRectangle(
+                            (int)xBarra,
+                            (int)yBarra,
+                            (int)larguraBarra,
+                            (int)alturaBarra,
+                            GRAY
+                        );
+
+                        // Preenchimento verde
+                        DrawRectangle(
+                            (int)xBarra,
+                            (int)yBarra,
+                            (int)(larguraBarra * porcentagemVida),
+                            (int)alturaBarra,
+                            GREEN
+                        );
+                    }
+                }
             EndMode2D();
             DrawRectangle(0, 0, LARGURA_TELA, ALTURA_TELA, Fade(BLACK, intensidade_noite));
             // Tela levemente vermelha enquanto toma dano
             if (naAgua) DrawRectangle(0, 0, LARGURA_TELA, ALTURA_TELA, Fade(RED, 0.2f));
 
             DesenhaVida(vida);
+
+            if (pertoLava && !lavaAberta)
+            {
+                DesenhaTextoCentralizado("APERTE F PARA INTERAGIR", 90.0f, 20.0f, 2.0f, WHITE);
+            }
+
+            if (lavaAberta)
+            {
+                int w = 360, h = 170;
+                int x = (LARGURA_TELA - w) / 2, y = (ALTURA_TELA - h) / 2;
+
+                DrawRectangle(x, y, w, h, Fade(BLACK, 0.85f));
+                DrawRectangleLines(x, y, w, h, (Color){ 255, 140, 0, 255 });
+
+                DesenhaTextoCentralizado("LAVA", y + 12, 22.0f, 2.0f, (Color){ 255, 140, 0, 255 });
+                DesenhaTextoCentralizado(TextFormat("Jogar %d diamantes na lava?", LAVA_CUSTO),
+                                        y + 50, 16.0f, 1.5f, WHITE);
+
+                int tem = Inv_Contar(&inv, ITEM_DIAMANTE);
+                DesenhaTextoCentralizado(TextFormat("Diamantes: %d / %d", tem, LAVA_CUSTO),
+                                        y + 78, 16.0f, 1.5f, tem >= LAVA_CUSTO ? GREEN : RED);
+
+                DesenhaTextoCentralizado("ENTER - jogar    F - fechar", y + 110, 14.0f, 1.5f, LIGHTGRAY);
+
+                if (tempoMensagemLava > 0.0f)
+                    DesenhaTextoCentralizado(mensagemLava, y + 138, 14.0f, 1.5f, corMensagemLava);
+            }
 
             // Slot visual do escudo equipado
             int escudoX = 10;
@@ -1866,11 +2401,20 @@ int main(void)
         // --- DESCARREGAR RECURSOS ---
     Itens_Unload();
     liberar_recursos(arvores);
+    liberar_recursos(pedras);
+    liberar_recursos(ferros);
+    liberar_recursos(ouros);
+    liberar_recursos(diamantes);
     UnloadTexture(personagem);
     UnloadTexture(texArvore);
     UnloadTexture(texturaMonstro);
     UnloadTexture(texturaEsqueleto);
     UnloadTexture(texturaCaranguejo);
+    UnloadTexture(texturaSlime);
+    UnloadTexture(texPedra);
+    UnloadTexture(texFerro);
+    UnloadTexture(texOuro);
+    UnloadTexture(texDiamante);
     CloseWindow();
     return 0;
 }
