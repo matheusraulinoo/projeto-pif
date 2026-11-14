@@ -77,6 +77,13 @@
 #define DURACAO_TELA_MORTE 4.0f  // segundos na tela de morte antes de renascer
 #define NUM_ESTRELAS       90
 
+#define LAVA_CUSTO 5
+
+int lavaAberta = 0;
+char mensagemLava[64] = "";
+float tempoMensagemLava = 0.0f;
+Color corMensagemLava = WHITE;
+
 typedef enum {
     TELA_INICIO = 0,
     TELA_JOGO,
@@ -311,6 +318,31 @@ void SpawnMonstro(
 
         return;
     }
+}
+
+// Retorna 1 se existe algum tile 'tile' a menos de 'alcance' px do jogador
+static int PertoDeTile(char mapa[LINHAS][COLS], Vector2 pos, char tile, float alcance)
+{
+    int minX = (int)((pos.x - alcance) / TILE);
+    int maxX = (int)((pos.x + alcance) / TILE);
+    int minY = (int)((pos.y - alcance) / TILE);
+    int maxY = (int)((pos.y + alcance) / TILE);
+
+    for (int y = minY; y <= maxY; y++)
+    {
+        for (int x = minX; x <= maxX; x++)
+        {
+            if (x < 0 || x >= COLS || y < 0 || y >= LINHAS) continue;
+            if (mapa[y][x] != tile) continue;
+
+            float esq = x * TILE, topo = y * TILE;
+            float px = pos.x < esq  ? esq  : (pos.x > esq + TILE  ? esq + TILE  : pos.x);
+            float py = pos.y < topo ? topo : (pos.y > topo + TILE ? topo + TILE : pos.y);
+            float dx = pos.x - px, dy = pos.y - py;
+            if (dx * dx + dy * dy <= alcance * alcance) return 1;
+        }
+    }
+    return 0;
 }
 
 int CarregarMapa(const char *caminho, char mapa[LINHAS][COLS])
@@ -1226,7 +1258,7 @@ int main(void)
         }
         // Movimento do jogador (bloqueado enquanto o crafting está aberto)
         Vector2 proximo = jogador;
-        if (!craftingAberto)
+        if (!craftingAberto && !invAberto && !lavaAberta)
         {
             if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) proximo.x += velocidade * dt;
             if (IsKeyDown(KEY_LEFT)  || IsKeyDown(KEY_A)) proximo.x -= velocidade * dt;
@@ -1300,7 +1332,7 @@ int main(void)
 
         // Direção e animação do personagem
         int andando = 0;
-        if (!craftingAberto)
+        if (!craftingAberto && !invAberto && !lavaAberta)
         {
             if (IsKeyDown(KEY_DOWN)  || IsKeyDown(KEY_S)) { direcao = 0; andando = 1; }
             if (IsKeyDown(KEY_UP)    || IsKeyDown(KEY_W)) { direcao = 3; andando = 1; }
@@ -1433,6 +1465,8 @@ int main(void)
                             }
                         }
                     }
+                }
+                if (ferramentaAtual.poderMineracao > 0) {
                     if (ferramentaAtual.tipo == ITEM_PICARETA){
                         for (Recursos *a = pedrasAtivas; a != NULL; a = a->proximo) {
         
@@ -1453,7 +1487,7 @@ int main(void)
                                 a->raio_colisao
                             )) {
         
-                                quebrar_recurso(a, ferramentaAtual.poderCorte);
+                                quebrar_recurso(a, ferramentaAtual.poderMineracao);
                                 acertouAlvo = true;
         
                                 // Mantem a recompensa existente
@@ -1481,7 +1515,7 @@ int main(void)
                                 a->raio_colisao
                             )) {
         
-                                quebrar_recurso(a, ferramentaAtual.poderCorte);
+                                quebrar_recurso(a, ferramentaAtual.poderMineracao);
                                 acertouAlvo = true;
         
                                 // Mantem a recompensa existente
@@ -1509,7 +1543,7 @@ int main(void)
                                 a->raio_colisao
                             )) {
         
-                                quebrar_recurso(a, ferramentaAtual.poderCorte);
+                                quebrar_recurso(a, ferramentaAtual.poderMineracao);
                                 acertouAlvo = true;
         
                                 // Mantem a recompensa existente
@@ -1537,7 +1571,7 @@ int main(void)
                                 a->raio_colisao
                             )) {
         
-                                quebrar_recurso(a, ferramentaAtual.poderCorte);
+                                quebrar_recurso(a, ferramentaAtual.poderMineracao);
                                 acertouAlvo = true;
         
                                 // Mantem a recompensa existente
@@ -1599,6 +1633,42 @@ int main(void)
             invAberto = !invAberto;
             if (invAberto) craftingAberto = 0;
         }
+        if (tempoMensagemLava > 0.0f) tempoMensagemLava -= dt;
+
+        int pertoLava = PertoDeTile(mapa, jogador, 'a', 48.0f);
+
+        if (!pertoLava) lavaAberta = 0;   // se afastar, fecha
+
+        if (pertoLava && IsKeyPressed(KEY_F) && !craftingAberto && !invAberto)
+            lavaAberta = !lavaAberta;
+
+        if (lavaAberta && IsKeyPressed(KEY_ENTER))
+        {
+            if (Inv_Contar(&inv, ITEM_DIAMANTE) < LAVA_CUSTO)
+            {
+                snprintf(mensagemLava, sizeof(mensagemLava), "Voce precisa de %d diamantes.", LAVA_CUSTO);
+                corMensagemLava = RED;
+            }
+            else
+            {
+                Inv_Remover(&inv, ITEM_DIAMANTE, LAVA_CUSTO);
+
+                if (Inv_Add(&inv, ITEM_MAGNETITA, 1) > 0)
+                {
+                    // Sem espaço: devolve os diamantes
+                    Inv_Add(&inv, ITEM_DIAMANTE, LAVA_CUSTO);
+                    snprintf(mensagemLava, sizeof(mensagemLava), "Inventario cheio!");
+                    corMensagemLava = RED;
+                }
+                else
+                {
+                    snprintf(mensagemLava, sizeof(mensagemLava), "A lava aceitou! Voce recebeu 1 magnetita.");
+                    corMensagemLava = GREEN;
+                }
+            }
+            tempoMensagemLava = 2.0f;
+        }
+
         for (int k = 0; k < INV_COLS; k++)
             if (IsKeyPressed(KEY_ONE + k)) inv.selecionado = k;
 
@@ -1607,7 +1677,7 @@ int main(void)
             inv.slots[inv.selecionado]
         );
         // Equipar ou desequipar escudo com H
-        if (IsKeyPressed(KEY_H) && !craftingAberto) {
+        if (IsKeyPressed(KEY_H) && !craftingAberto && !invAberto && !lavaAberta) {
 
             Slot *selecionado = &inv.slots[inv.selecionado];
 
@@ -2201,6 +2271,33 @@ int main(void)
             if (naAgua) DrawRectangle(0, 0, LARGURA_TELA, ALTURA_TELA, Fade(RED, 0.2f));
 
             DesenhaVida(vida);
+
+            if (pertoLava && !lavaAberta)
+            {
+                DesenhaTextoCentralizado("APERTE F PARA INTERAGIR", 90.0f, 20.0f, 2.0f, WHITE);
+            }
+
+            if (lavaAberta)
+            {
+                int w = 360, h = 170;
+                int x = (LARGURA_TELA - w) / 2, y = (ALTURA_TELA - h) / 2;
+
+                DrawRectangle(x, y, w, h, Fade(BLACK, 0.85f));
+                DrawRectangleLines(x, y, w, h, (Color){ 255, 140, 0, 255 });
+
+                DesenhaTextoCentralizado("LAVA", y + 12, 22.0f, 2.0f, (Color){ 255, 140, 0, 255 });
+                DesenhaTextoCentralizado(TextFormat("Jogar %d diamantes na lava?", LAVA_CUSTO),
+                                        y + 50, 16.0f, 1.5f, WHITE);
+
+                int tem = Inv_Contar(&inv, ITEM_DIAMANTE);
+                DesenhaTextoCentralizado(TextFormat("Diamantes: %d / %d", tem, LAVA_CUSTO),
+                                        y + 78, 16.0f, 1.5f, tem >= LAVA_CUSTO ? GREEN : RED);
+
+                DesenhaTextoCentralizado("ENTER - jogar    F - fechar", y + 110, 14.0f, 1.5f, LIGHTGRAY);
+
+                if (tempoMensagemLava > 0.0f)
+                    DesenhaTextoCentralizado(mensagemLava, y + 138, 14.0f, 1.5f, corMensagemLava);
+            }
 
             // Slot visual do escudo equipado
             int escudoX = 10;
