@@ -90,6 +90,12 @@ typedef enum {
     TELA_MORTE
 } TelaJogo;
 
+typedef enum {
+    LOCAL_ILHA,
+    LOCAL_CASA,
+    LOCAL_CAVERNA
+} LocalAtual;
+
 Monstro monstros[MAX_MONSTROS] = {0};
 int quantidadeMonstros = 0;
 
@@ -1133,6 +1139,7 @@ int main(void)
     }
     
     int dentro = 0;                          // 0 = fora, 1 = dentro do local
+    LocalAtual localAtual = LOCAL_ILHA;
     Vector2 posAntesDeEntrar = jogador;      // para voltar ao lugar certo ao sair
     Recursos *arvoresAtivas = arvores;       // árvores do mapa atual (NULL dentro de casa/caverna)
     Recursos *pedrasAtivas = NULL;         // pedras do mapa atual (NULL dentro de casa/ilha)
@@ -1179,6 +1186,7 @@ int main(void)
                 if (dentro && CarregarMapa(MAPA_ILHA, mapa))
                 {
                     dentro = 0;
+                    localAtual = LOCAL_ILHA;
                     arvoresAtivas = arvores;
                     pedrasAtivas = NULL;
                     ferroAtivos = NULL;
@@ -1288,6 +1296,7 @@ int main(void)
                 {
                     dentro = 1;
                     jogador = (Vector2){ CASA_SPAWN_X, CASA_SPAWN_Y };
+                    localAtual = LOCAL_CASA;
                 }
             }
             else
@@ -1296,6 +1305,7 @@ int main(void)
                 {
                     dentro = 0;
                     jogador = posAntesDeEntrar;
+                    localAtual = LOCAL_ILHA;
                 }
             }
             arvoresAtivas = NULL;
@@ -1313,6 +1323,7 @@ int main(void)
                 {
                     dentro = 1;
                     jogador = (Vector2){ CAVERNA_SPAWN_X, CAVERNA_SPAWN_Y };
+                    localAtual = LOCAL_CAVERNA;
                 }
             }
             else
@@ -1321,6 +1332,7 @@ int main(void)
                 {
                     dentro = 0;
                     jogador = posAntesDeEntrar;
+                    localAtual = LOCAL_ILHA;
                 }
             }
             arvoresAtivas = dentro ? NULL : arvores;
@@ -1409,7 +1421,7 @@ int main(void)
             bool acertouAlvo = false;
 
             // Verifica todos os monstros
-            if (!dentro) {
+            if (localAtual != LOCAL_CASA) {
                 for (int i = 0; i < quantidadeMonstros; i++) {
                     if (monstros[i].morto) continue;
 
@@ -1720,7 +1732,7 @@ int main(void)
             tempoMorte = 0.0f;
         }
         //logica de spawn de monstros
-        if (isNoite && !dentro){
+        if ((isNoite && localAtual != LOCAL_CASA) || localAtual == LOCAL_CAVERNA){
             timerSpawn += dt;
 
             if (timerSpawn >= intervaloSpawn) {
@@ -1748,7 +1760,7 @@ int main(void)
         float danoSol = 2.0f;
         
         //atualiza monstros
-        if (!dentro){
+        if (localAtual != LOCAL_CASA){
             for (int i = 0; i < quantidadeMonstros; i++) {
                 if (monstros[i].morto) continue;
                 
@@ -1804,7 +1816,7 @@ int main(void)
                 }
                 
                 //dano de sol
-                if (!isNoite) {
+                if (!isNoite && localAtual != LOCAL_CAVERNA) {
                     monstros[i].vida -= danoSol * dt;
 
                     if (monstros[i].vida <= 0) {
