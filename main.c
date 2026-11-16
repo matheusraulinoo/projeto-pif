@@ -878,6 +878,86 @@ int main(void)
             .resultado = ITEM_ESPADA, .qtdResultado = 1, .tier = TIER_PEDRA,
             .ing = { { ITEM_PEDRA, 2 }, { ITEM_GRAVETO, 1 } }, .totalIng = 2
         },
+        {
+            .nome = "Espada de Ferro",
+            .resultado = ITEM_ESPADA, .qtdResultado = 1, .tier = TIER_FERRO,
+            .ing = { { ITEM_FERRO, 2 }, { ITEM_GRAVETO, 1 } }, .totalIng = 2
+        },
+        {
+            .nome = "Espada de Ouro",
+            .resultado = ITEM_ESPADA, .qtdResultado = 1, .tier = TIER_OURO,
+            .ing = { { ITEM_OURO, 2 }, { ITEM_GRAVETO, 1 } }, .totalIng = 2
+        },
+        {
+            .nome = "Espada de Diamante",
+            .resultado = ITEM_ESPADA, .qtdResultado = 1, .tier = TIER_DIAMANTE,
+            .ing = { { ITEM_DIAMANTE, 2 }, { ITEM_GRAVETO, 1 } }, .totalIng = 2
+        },
+        {
+            .nome = "Espada de Magnetita",
+            .resultado = ITEM_ESPADA, .qtdResultado = 1, .tier = TIER_MAGNETITA,
+            .ing = { { ITEM_MAGNETITA, 2 }, { ITEM_GRAVETO, 1 } }, .totalIng = 2
+        },
+        {
+            .nome = "Picareta de Madeira",
+            .resultado = ITEM_PICARETA, .qtdResultado = 1, .tier = TIER_MADEIRA,
+            .ing = { { ITEM_MADEIRA, 3 }, { ITEM_GRAVETO, 2 } }, .totalIng = 2
+        },
+        {
+            .nome = "Picareta de Pedra",
+            .resultado = ITEM_PICARETA, .qtdResultado = 1, .tier = TIER_PEDRA,
+            .ing = { { ITEM_PEDRA, 3 }, { ITEM_GRAVETO, 2 } }, .totalIng = 2
+        },
+        {
+            .nome = "Picareta de Ferro",
+            .resultado = ITEM_PICARETA, .qtdResultado = 1, .tier = TIER_FERRO,
+            .ing = { { ITEM_FERRO, 3 }, { ITEM_GRAVETO, 2 } }, .totalIng = 2
+        },
+        {
+            .nome = "Picareta de Ouro",
+            .resultado = ITEM_PICARETA, .qtdResultado = 1, .tier = TIER_OURO,
+            .ing = { { ITEM_OURO, 3 }, { ITEM_GRAVETO, 2 } }, .totalIng = 2
+        },
+        {
+            .nome = "Picareta de Diamante",
+            .resultado = ITEM_PICARETA, .qtdResultado = 1, .tier = TIER_DIAMANTE,
+            .ing = { { ITEM_DIAMANTE, 3 }, { ITEM_GRAVETO, 2 } }, .totalIng = 2
+        },
+        {
+            .nome = "Picareta de Magnetita",
+            .resultado = ITEM_PICARETA, .qtdResultado = 1, .tier = TIER_MAGNETITA,
+            .ing = { { ITEM_MAGNETITA, 3 }, { ITEM_GRAVETO, 2 } }, .totalIng = 2
+        },
+        {
+            .nome = "Machado de Madeira",
+            .resultado = ITEM_MACHADO, .qtdResultado = 1, .tier = TIER_MADEIRA,
+            .ing = { { ITEM_MADEIRA, 3 }, { ITEM_GRAVETO, 2 } }, .totalIng = 2
+        },
+        {
+            .nome = "Machado de Pedra",
+            .resultado = ITEM_MACHADO, .qtdResultado = 1, .tier = TIER_PEDRA,
+            .ing = { { ITEM_PEDRA, 3 }, { ITEM_GRAVETO, 2 } }, .totalIng = 2
+        },
+        {
+            .nome = "Machado de Ferro",
+            .resultado = ITEM_MACHADO, .qtdResultado = 1, .tier = TIER_FERRO,
+            .ing = { { ITEM_FERRO, 3 }, { ITEM_GRAVETO, 2 } }, .totalIng = 2
+        },
+        {
+            .nome = "Machado de Ouro",
+            .resultado = ITEM_MACHADO, .qtdResultado = 1, .tier = TIER_OURO,
+            .ing = { { ITEM_OURO, 3 }, { ITEM_GRAVETO, 2 } }, .totalIng = 2
+        },
+        {
+            .nome = "Machado de Diamante",
+            .resultado = ITEM_MACHADO, .qtdResultado = 1, .tier = TIER_DIAMANTE,
+            .ing = { { ITEM_DIAMANTE, 3 }, { ITEM_GRAVETO, 2 } }, .totalIng = 2
+        },
+        {
+            .nome = "Machado de Magnetita",
+            .resultado = ITEM_MACHADO, .qtdResultado = 1, .tier = TIER_MAGNETITA,
+            .ing = { { ITEM_MAGNETITA, 3 }, { ITEM_GRAVETO, 2 } }, .totalIng = 2
+        },
     };
     int totalReceitas = (int)(sizeof(receitasCraft) / sizeof(receitasCraft[0]));
     int receitaSelecionada = 0;

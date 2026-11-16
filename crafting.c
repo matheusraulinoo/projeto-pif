@@ -65,7 +65,9 @@ int Craftar(Inventario *inv, Receita r) {
 #define CRAFT_Y            60
 #define CRAFT_LARGURA      400
 #define CRAFT_ALTURA       310
-#define CRAFT_LINHA_ALTURA 62
+#define CRAFT_LINHA_ALTURA 50
+#define CRAFT_VISIVEIS     4
+#define CRAFT_TOPO_LISTA   (CRAFT_Y + 44)
 
 int DesenharCraftingUI(Receita *receitas, int total, Inventario *inv,
                        int *selecionada, const char *mensagem, Color corMensagem)
@@ -75,21 +77,45 @@ int DesenharCraftingUI(Receita *receitas, int total, Inventario *inv,
     if (*selecionada < 0) *selecionada = 0;
     if (*selecionada >= total) *selecionada = total - 1;
 
+    // Primeira receita visível na lista (rolagem)
+    static int rolagem = 0;
+
+    int mx = GetMouseX();
+    int my = GetMouseY();
+
     // Navegação pelo teclado
     if (IsKeyPressed(KEY_DOWN)) *selecionada = (*selecionada + 1) % total;
     if (IsKeyPressed(KEY_UP))   *selecionada = (*selecionada + total - 1) % total;
 
+    // Roda do mouse percorre a lista de receitas
+    Rectangle painel = { CRAFT_X, CRAFT_Y, CRAFT_LARGURA, CRAFT_ALTURA };
+    float roda = GetMouseWheelMove();
+    if (roda != 0.0f && CheckCollisionPointRec((Vector2){ (float)mx, (float)my }, painel)) {
+        int passos = (int)roda;
+        *selecionada = (*selecionada - passos) % total;
+        if (*selecionada < 0) *selecionada += total;
+    }
+
+    // Mantém a receita selecionada dentro da área visível
+    if (*selecionada < rolagem) rolagem = *selecionada;
+    if (*selecionada >= rolagem + CRAFT_VISIVEIS)
+        rolagem = *selecionada - CRAFT_VISIVEIS + 1;
+
+    int maxRolagem = total - CRAFT_VISIVEIS;
+    if (maxRolagem < 0) maxRolagem = 0;
+    if (rolagem > maxRolagem) rolagem = maxRolagem;
+    if (rolagem < 0) rolagem = 0;
+
+    int fim = rolagem + CRAFT_VISIVEIS;
+    if (fim > total) fim = total;
+
     int craftar = IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER) || IsKeyPressed(KEY_SPACE);
 
     // Navegação/clique pelo mouse
-    int mx = GetMouseX();
-    int my = GetMouseY();
-    int topoLista = CRAFT_Y + 44;
-
-    for (int i = 0; i < total; i++) {
+    for (int i = rolagem; i < fim; i++) {
         Rectangle linha = {
             (float)CRAFT_X + 10,
-            (float)(topoLista + i * CRAFT_LINHA_ALTURA),
+            (float)(CRAFT_TOPO_LISTA + (i - rolagem) * CRAFT_LINHA_ALTURA),
             (float)CRAFT_LARGURA - 20,
             (float)CRAFT_LINHA_ALTURA - 6
         };
@@ -108,14 +134,14 @@ int DesenharCraftingUI(Receita *receitas, int total, Inventario *inv,
     DrawText("CRAFTING", CRAFT_X + 16, CRAFT_Y + 10, 22, WHITE);
     DrawText("Enter/clique: craftar", CRAFT_X + CRAFT_LARGURA - 172, CRAFT_Y + 16, 12, GRAY);
 
-    // Lista de receitas
-    for (int i = 0; i < total; i++) {
+    // Lista de receitas (apenas as visíveis)
+    for (int i = rolagem; i < fim; i++) {
         Receita r = receitas[i];
         int pode = PodeCraftar(inv, r);
 
         Rectangle linha = {
             (float)CRAFT_X + 10,
-            (float)(topoLista + i * CRAFT_LINHA_ALTURA),
+            (float)(CRAFT_TOPO_LISTA + (i - rolagem) * CRAFT_LINHA_ALTURA),
             (float)CRAFT_LARGURA - 20,
             (float)CRAFT_LINHA_ALTURA - 6
         };
@@ -134,7 +160,7 @@ int DesenharCraftingUI(Receita *receitas, int total, Inventario *inv,
 
         // Nome da receita
         const char *nome = r.nome ? r.nome : itens[r.resultado].nome;
-        DrawText(nome, (int)linha.x + 50, (int)linha.y + 5, 18, pode ? WHITE : GRAY);
+        DrawText(nome, (int)linha.x + 50, (int)linha.y + 4, 18, pode ? WHITE : GRAY);
 
         // Ingredientes
         char textoIng[128] = "";
@@ -145,22 +171,34 @@ int DesenharCraftingUI(Receita *receitas, int total, Inventario *inv,
                             r.ing[j].qtd,
                             itens[r.ing[j].tipo].nome);
         }
-        DrawText(textoIng, (int)linha.x + 50, (int)linha.y + 27, 14,
+        DrawText(textoIng, (int)linha.x + 50, (int)linha.y + 26, 14,
                  pode ? LIGHTGRAY : (Color){ 190, 120, 120, 255 });
 
         // Status
         const char *status = pode ? "PRONTO" : "FALTAM";
         int larguraStatus = MeasureText(status, 14);
         DrawText(status, (int)(linha.x + linha.width - larguraStatus - 10),
-                 (int)linha.y + 19, 14, pode ? GREEN : RED);
+                 (int)linha.y + 17, 14, pode ? GREEN : RED);
     }
+
+    // Indicadores de rolagem
+    if (rolagem > 0)
+        DrawRectangle(CRAFT_X + CRAFT_LARGURA - 8, CRAFT_TOPO_LISTA, 3, 10, GRAY);
+    if (fim < total)
+        DrawRectangle(CRAFT_X + CRAFT_LARGURA - 8,
+                      CRAFT_TOPO_LISTA + CRAFT_VISIVEIS * CRAFT_LINHA_ALTURA - 16,
+                      3, 10, GRAY);
 
     // Rodapé: dica ou mensagem de feedback
     if (mensagem && mensagem[0])
         DrawText(mensagem, CRAFT_X + 16, CRAFT_Y + CRAFT_ALTURA - 24, 14, corMensagem);
     else
-        DrawText("Setas: escolher | C: fechar", CRAFT_X + 16,
+        DrawText("Setas/roda: escolher | C: fechar", CRAFT_X + 16,
                  CRAFT_Y + CRAFT_ALTURA - 24, 14, GRAY);
+
+    // Posição da receita selecionada na lista
+    DrawText(TextFormat("%d/%d", *selecionada + 1, total),
+             CRAFT_X + CRAFT_LARGURA - 58, CRAFT_Y + CRAFT_ALTURA - 24, 14, GRAY);
 
     return craftar;
 }
