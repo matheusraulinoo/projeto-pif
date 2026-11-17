@@ -2052,7 +2052,7 @@ int main(void)
                 
                 // 4. Y-SORTING PARTE 2: Desenha as árvores que estão na FRENTE do jogador
                 // Renderiza Monstros
-                for (int i = 0; i < quantidadeMonstros; i++) {
+                for (int i = 0; localAtual != LOCAL_CASA && i < quantidadeMonstros; i++) {
                     if (monstros[i].morto) continue;
 
                     // Seleciona a textura conforme o tipo de monstro
