@@ -1031,6 +1031,15 @@ int main(void)
     char mapa[LINHAS][COLS];
 
     if (!CarregarMapa(MAPA_ILHA, mapa)) return 1;
+    // Uma imagem por local (índice = LocalAtual). Se o arquivo não existir, desenha os tiles.
+    Texture2D texMapas[3];
+    texMapas[LOCAL_ILHA]    = LoadTexture("pictures/ilha.png");
+    texMapas[LOCAL_CASA]    = LoadTexture("pictures/casa.png");
+    texMapas[LOCAL_CAVERNA] = LoadTexture("pictures/caverna.png");
+    for (int i = 0; i < 3; i++)
+        if (texMapas[i].id != 0) SetTextureFilter(texMapas[i], TEXTURE_FILTER_POINT);
+
+    bool debug = false;   // F1 mostra a colisão do txt por cima
 
     Texture2D texturaMonstro = LoadTexture("pictures/slime.png");
     // Texturas temporarias dos diferentes monstros
@@ -1324,6 +1333,7 @@ int main(void)
                 receitaSelecionada = 0;
                 mensagemCraft[0] = '\0';
                 tempoMensagemCraft = 0.0f;
+                quantidadeMonstros = 0;
 
                 telaAtual = TELA_JOGO;
                 tempoTela = 0.0f;
@@ -1341,7 +1351,7 @@ int main(void)
 
         // --- SISTEMA DE HORÁRIO ---
         // tempo_jogo conta os segundos do dia atual; ao completar o ciclo, começa outro dia.
-        tempo_jogo += dt;
+        if (localAtual != LOCAL_CASA) tempo_jogo += dt;   // dentro da casa o relógio para
         if (tempo_jogo >= duracao_dia_noite)
         {
             tempo_jogo -= duracao_dia_noite;
@@ -1486,7 +1496,7 @@ int main(void)
 
         // Câmera segue o jogador
         camera.target = jogador;
-        camera.zoom += GetMouseWheelMove() * 0.1f;
+        if(!invAberto && !craftingAberto && !lavaAberta) camera.zoom += GetMouseWheelMove() * 0.1f;
         if (camera.zoom < 0.5f) camera.zoom = 0.5f;
         if (camera.zoom > 3.0f) camera.zoom = 3.0f;
 
@@ -1625,6 +1635,10 @@ int main(void)
                                 }
                             }
                         }
+                    }
+                }
+                if (ferramentaAtual.poderMineracao > 0) {
+                    if (ferramentaAtual.tipo == ITEM_PICARETA){
                         for (Recursos *a = ferroAtivos; a != NULL; a = a->proximo) {
         
                             if (a->quebrado) continue;
@@ -1653,6 +1667,10 @@ int main(void)
                                 }
                             }
                         }
+                    }
+                }
+                if (ferramentaAtual.poderMineracao > 0) {
+                    if (ferramentaAtual.tipo == ITEM_PICARETA){
                         for (Recursos *a = ouroAtivos; a != NULL; a = a->proximo) {
         
                             if (a->quebrado) continue;
@@ -1681,6 +1699,10 @@ int main(void)
                                 }
                             }
                         }
+                    }
+                }
+                if (ferramentaAtual.poderMineracao > 0) {
+                    if (ferramentaAtual.tipo == ITEM_PICARETA){
                         for (Recursos *a = diamanteAtivos; a != NULL; a = a->proximo) {
         
                             if (a->quebrado) continue;
@@ -1743,18 +1765,24 @@ int main(void)
             
         }
         
-
-        atualiza_recurso(arvores);
-        atualiza_recurso(pedras);
-        atualiza_recurso(ferros);
-        atualiza_recurso(ouros);
-        atualiza_recurso(diamantes);
-
+        if(localAtual != LOCAL_CASA){
+            atualiza_recurso(arvores);
+            atualiza_recurso(pedras);
+            atualiza_recurso(ferros);
+            atualiza_recurso(ouros);
+            atualiza_recurso(diamantes);
+        }
+        
         // Abre/fecha a interface de crafting (fecha o inventário para não sobrepor)
         if (IsKeyPressed(KEY_C))
         {
-            craftingAberto = !craftingAberto;
-            if (craftingAberto) invAberto = 0;
+            if(localAtual == LOCAL_CASA){
+                craftingAberto = !craftingAberto;
+                if (craftingAberto) invAberto = 0;
+            }
+            else{
+                DesenhaTextoCentralizado("Voce precisa estar dentro da casa para abrir o crafting.", 10.0f, 20.0f, 2.0f, RED);
+            }
         }
 
         if (IsKeyPressed(KEY_TAB))
@@ -1944,36 +1972,54 @@ int main(void)
             }
         }
 
+        if (IsKeyPressed(KEY_F1)) debug = !debug;
+
         BeginTextureMode(tela);
             ClearBackground(BLACK);
 
             BeginMode2D(camera);
-                
-                // 1. DESENHO DO CHÃO DO MAPA
-                for (int y = 0; y < LINHAS; y++)
+
+                Texture2D texAtual = texMapas[localAtual];
+                bool temImagem = (texAtual.id != 0);
+
+                if (temImagem)
                 {
-                    for (int x = 0; x < COLS; x++)
-                    {
-                        Color cor;
-                        switch (mapa[y][x])
-                        {
-                            case 0: cor = BLUE;      break;
-                            case 3: cor = DARKGRAY;  break;
-                            case 4: cor = LIGHTGRAY; break;
-                            case 6: cor = (Color){ 20, 140, 60, 255 }; break;
-                            case 7: cor = BLACK;     break;
-                            case 8: cor = (Color){ 100, 50, 0, 255 }; break;
-                            case 9: cor = (Color){ 141, 73, 37, 255 }; break;
-                            case 'a': cor = (Color){ 255, 255, 0, 255 }; break;
-                            case 'd': cor = (Color){ 255, 128, 0, 255 }; break;
-                            case 'e': cor = (Color){ 128, 0, 255, 255 }; break;
-                            case 'f': cor = (Color){ 0, 255, 128, 255 }; break;
-                            default: cor = BLACK;    break;
-                        }
-                        DrawRectangle(x * TILE, y * TILE, TILE, TILE, cor);
-                    }
+                    DrawTexturePro(texAtual,
+                        (Rectangle){ 0, 0, (float)texAtual.width, (float)texAtual.height },
+                        (Rectangle){ 0, 0, MAPA_LARGURA, MAPA_ALTURA },
+                        (Vector2){ 0, 0 }, 0.0f, WHITE);
                 }
 
+                // Sem imagem: desenha os tiles normalmente. Com imagem: só no modo debug, transparente.
+                if (debug || !temImagem)
+                {
+                    float alpha = temImagem ? 0.4f : 1.0f;
+
+                    for (int y = 0; y < LINHAS; y++)
+                    {
+                        for (int x = 0; x < COLS; x++)
+                        {
+                            Color cor;
+                            switch (mapa[y][x])
+                            {
+                                case 0: cor = BLUE;      break;
+                                case 3: cor = DARKGRAY;  break;
+                                case 4: cor = LIGHTGRAY; break;
+                                case 6: cor = (Color){ 20, 140, 60, 255 }; break;
+                                case 7: cor = BLACK;     break;
+                                case 8: cor = (Color){ 100, 50, 0, 255 }; break;
+                                case 9: cor = (Color){ 141, 73, 37, 255 }; break;
+                                case 'a': cor = (Color){ 255, 255, 0, 255 }; break;
+                                case 'd': cor = (Color){ 255, 128, 0, 255 }; break;
+                                case 'e': cor = (Color){ 128, 0, 255, 255 }; break;
+                                case 'f': cor = (Color){ 0, 255, 128, 255 }; break;
+                                default: cor = BLACK;    break;
+                            }
+                            DrawRectangle(x * TILE, y * TILE, TILE, TILE, Fade(cor, alpha));
+                        }
+                    }
+                }
+                
                 // 2. Y-SORTING PARTE 1: Desenha as árvores que estão ATRÁS do jogador
                 for (Recursos *a = arvoresAtivas; a != NULL; a = a->proximo)
                 {
@@ -2493,7 +2539,7 @@ int main(void)
                 TextFormat("Escudo: %s | Defesa: %.0f",
                     escudoEquipado.tipo == ITEM_ESCUDO ? "Equipado" : "Nenhum",
                     defesaJogador),
-                10, 75, 16, WHITE
+                10, 10, 16, WHITE
             );
 
             if (craftingAberto) {
@@ -2516,13 +2562,8 @@ int main(void)
                     tempoMensagemCraft = 2.0f;
                 }
             }
-
-            
-            DrawText("Setas ou WASD para mover | E: coletar", 10, 10, 18, BLACK);
-
-            DrawText("TAB: inventario | C: crafting", 10, 32, 16, BLACK);
             DrawText(TextFormat("Dia %d | %s %02d:%02d", dia, isNoite ? "Noite" : "Dia", hora, minuto), 545, 10, 20, isNoite ? BLUE : GOLD);
-            DrawFPS(10, 40);
+            if (debug) DrawFPS(10, 40);
         ApresentarTela(tela, destinoTela);
     }
 
@@ -2545,6 +2586,7 @@ int main(void)
     UnloadTexture(texOuro);
     UnloadTexture(texDiamante);
     UnloadRenderTexture(tela);
+    for (int i = 0; i < 3; i++) UnloadTexture(texMapas[i]);
     CloseWindow();
     return 0;
 }
