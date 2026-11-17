@@ -1314,7 +1314,7 @@ int main(void)
 
         // --- SISTEMA DE HORÁRIO ---
         // tempo_jogo conta os segundos do dia atual; ao completar o ciclo, começa outro dia.
-        tempo_jogo += dt;
+        if (localAtual != LOCAL_CASA) tempo_jogo += dt;   // dentro da casa o relógio para
         if (tempo_jogo >= duracao_dia_noite)
         {
             tempo_jogo -= duracao_dia_noite;
@@ -1728,18 +1728,24 @@ int main(void)
             
         }
         
-
-        atualiza_recurso(arvores);
-        atualiza_recurso(pedras);
-        atualiza_recurso(ferros);
-        atualiza_recurso(ouros);
-        atualiza_recurso(diamantes);
-
+        if(localAtual != LOCAL_CASA){
+            atualiza_recurso(arvores);
+            atualiza_recurso(pedras);
+            atualiza_recurso(ferros);
+            atualiza_recurso(ouros);
+            atualiza_recurso(diamantes);
+        }
+        
         // Abre/fecha a interface de crafting (fecha o inventário para não sobrepor)
         if (IsKeyPressed(KEY_C))
         {
-            craftingAberto = !craftingAberto;
-            if (craftingAberto) invAberto = 0;
+            if(localAtual == LOCAL_CASA){
+                craftingAberto = !craftingAberto;
+                if (craftingAberto) invAberto = 0;
+            }
+            else{
+                DesenhaTextoCentralizado("Voce precisa estar dentro da casa para abrir o crafting.", 10.0f, 20.0f, 2.0f, RED);
+            }
         }
 
         if (IsKeyPressed(KEY_TAB))
