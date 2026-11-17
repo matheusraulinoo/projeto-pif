@@ -725,7 +725,7 @@ static void DesenhaTelaInicio(float tempo)
     DesenhaTextoCentralizado("TAB - INVENTÁRIO      C - CRAFTING",
                              330.0f, 15.0f, 1.5f,
                              (Color){ 190, 188, 205, 255 });
-    DesenhaTextoCentralizado("ESC - SAIR", 357.0f, 12.0f, 2.0f,
+    DesenhaTextoCentralizado("F11 - TELA CHEIA      ESC - SAIR", 357.0f, 12.0f, 2.0f,
                              (Color){ 120, 118, 138, 255 });
 
     DesenhaVinheta(BLACK, 1.0f);
@@ -808,6 +808,36 @@ static void DesenhaTelaMorte(float tempoMorte, float tempoRestante, int dia)
         DesenhaTextoCentralizado("ENTER PARA RENASCER AGORA", 382.0f, 12.0f, 2.0f,
                                  Fade((Color){ 140, 130, 145, 255 }, pisca * entrada));
     }
+}
+
+static Rectangle AjustarTela(void)
+{
+    int largura = GetScreenWidth();
+    int altura = GetScreenHeight();
+    float escala = fminf((float)largura / LARGURA_TELA, (float)altura / ALTURA_TELA);
+    Rectangle destino = {
+        floorf((largura - LARGURA_TELA * escala) / 2.0f),
+        floorf((altura - ALTURA_TELA * escala) / 2.0f),
+        LARGURA_TELA * escala,
+        ALTURA_TELA * escala
+    };
+
+    // Converte o mouse da janela para as coordenadas usadas pelo jogo.
+    SetMouseOffset(-(int)destino.x, -(int)destino.y);
+    SetMouseScale(1.0f / escala, 1.0f / escala);
+    return destino;
+}
+
+static void ApresentarTela(RenderTexture2D tela, Rectangle destino)
+{
+    EndTextureMode();
+    BeginDrawing();
+        ClearBackground(BLACK);
+        // A altura negativa corrige a orientação da textura renderizada.
+        DrawTexturePro(tela.texture,
+                       (Rectangle){ 0, 0, LARGURA_TELA, -ALTURA_TELA },
+                       destino, (Vector2){ 0, 0 }, 0.0f, WHITE);
+    EndDrawing();
 }
 
 int main(void)
@@ -1229,6 +1259,8 @@ int main(void)
             numDiamante++;
         }
     }
+
+    //TO DO: garantir que tenha plo menos 1 de cada minerio
     
     int dentro = 0;                          // 0 = fora, 1 = dentro do local
     LocalAtual localAtual = LOCAL_ILHA;
@@ -1245,8 +1277,13 @@ int main(void)
     float tempoTela  = 0.0f;
     float tempoMorte = 0.0f;
 
+    RenderTexture2D tela = LoadRenderTexture(LARGURA_TELA, ALTURA_TELA);
+
     while (!WindowShouldClose())
     {
+        if (IsKeyPressed(KEY_F11)) ToggleBorderlessWindowed();
+        Rectangle destinoTela = AjustarTela();
+
         float dt = GetFrameTime();
         tempoTela += dt;
 
@@ -1259,10 +1296,10 @@ int main(void)
                 tempoTela = 0.0f;
             }
 
-            BeginDrawing();
+            BeginTextureMode(tela);
                 ClearBackground(BLACK);
                 DesenhaTelaInicio(tempoTela);
-            EndDrawing();
+            ApresentarTela(tela, destinoTela);
 
             continue;
         }
@@ -1305,10 +1342,10 @@ int main(void)
                 tempoTela = 0.0f;
             }
 
-            BeginDrawing();
+            BeginTextureMode(tela);
                 ClearBackground(BLACK);
                 DesenhaTelaMorte(tempoMorte, DURACAO_TELA_MORTE - tempoMorte, dia);
-            EndDrawing();
+            ApresentarTela(tela, destinoTela);
 
             continue;
         }
@@ -1945,7 +1982,7 @@ int main(void)
 
         if (IsKeyPressed(KEY_F1)) debug = !debug;
 
-        BeginDrawing();
+        BeginTextureMode(tela);
             ClearBackground(BLACK);
 
             BeginMode2D(camera);
@@ -2540,7 +2577,7 @@ int main(void)
                 float alpha = (tempoAviso < 0.5f) ? tempoAviso / 0.5f : 1.0f;   // some suavemente no final
                 DesenhaTextoCentralizado(aviso, 40.0f, 18.0f, 2.0f, Fade(corAviso, alpha));
             }
-        EndDrawing();
+        ApresentarTela(tela, destinoTela);
     }
 
     // --- DESCARREGAR RECURSOS ---
@@ -2561,6 +2598,7 @@ int main(void)
     UnloadTexture(texFerro);
     UnloadTexture(texOuro);
     UnloadTexture(texDiamante);
+    UnloadRenderTexture(tela);
     for (int i = 0; i < 3; i++) UnloadTexture(texMapas[i]);
     CloseWindow();
     return 0;
