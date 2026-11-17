@@ -963,6 +963,9 @@ int main(void)
     int receitaSelecionada = 0;
     int craftingAberto = 0;
     char mensagemCraft[64] = "";
+    char aviso[96] = "";
+    float tempoAviso = 0.0f;
+    Color corAviso = WHITE;
     float tempoMensagemCraft = 0.0f;
     Color corMensagemCraft = WHITE;
 
@@ -1311,6 +1314,7 @@ int main(void)
         }
 
         if (tempoMensagemCraft > 0.0f) tempoMensagemCraft -= dt;
+        if (tempoAviso > 0.0f) tempoAviso -= dt;
 
         // --- SISTEMA DE HORÁRIO ---
         // tempo_jogo conta os segundos do dia atual; ao completar o ciclo, começa outro dia.
@@ -1398,7 +1402,7 @@ int main(void)
                     localAtual = LOCAL_ILHA;
                 }
             }
-            arvoresAtivas = NULL;
+            arvoresAtivas = dentro ? NULL : arvores;
             pedrasAtivas = NULL;
             ferroAtivos = NULL;
             ouroAtivos = NULL;
@@ -1735,16 +1739,20 @@ int main(void)
             atualiza_recurso(ouros);
             atualiza_recurso(diamantes);
         }
-        
+
         // Abre/fecha a interface de crafting (fecha o inventário para não sobrepor)
         if (IsKeyPressed(KEY_C))
         {
-            if(localAtual == LOCAL_CASA){
+            if (localAtual == LOCAL_CASA)
+            {
                 craftingAberto = !craftingAberto;
                 if (craftingAberto) invAberto = 0;
             }
-            else{
-                DesenhaTextoCentralizado("Voce precisa estar dentro da casa para abrir o crafting.", 10.0f, 20.0f, 2.0f, RED);
+            else
+            {
+                snprintf(aviso, sizeof(aviso), "Voce precisa estar dentro da casa para abrir o crafting.");
+                corAviso = RED;
+                tempoAviso = 2.0f;   // fica 2 segundos na tela
             }
         }
 
@@ -2527,6 +2535,11 @@ int main(void)
             }
             DrawText(TextFormat("Dia %d | %s %02d:%02d", dia, isNoite ? "Noite" : "Dia", hora, minuto), 545, 10, 20, isNoite ? BLUE : GOLD);
             if (debug) DrawFPS(10, 40);
+            if (tempoAviso > 0.0f)
+            {
+                float alpha = (tempoAviso < 0.5f) ? tempoAviso / 0.5f : 1.0f;   // some suavemente no final
+                DesenhaTextoCentralizado(aviso, 40.0f, 18.0f, 2.0f, Fade(corAviso, alpha));
+            }
         EndDrawing();
     }
 
