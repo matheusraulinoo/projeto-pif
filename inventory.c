@@ -394,12 +394,14 @@ Ferramenta ObterFerramenta(Slot slot) {
         case ITEM_MACHADO:
             f.poderCorte = tierDamage[slot.tier];
             f.duracaoAnimacao = 0.25f;
+            f.dano *= 0.5f;
             break;
 
         case ITEM_PICARETA:
             f.poderCorte = 0;
             f.poderMineracao = tierDamage[slot.tier];
             f.duracaoAnimacao = 0.2f;
+            f.dano *= 0.5f;
             break;
 
         default:
