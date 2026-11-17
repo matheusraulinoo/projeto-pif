@@ -1296,6 +1296,7 @@ int main(void)
                 receitaSelecionada = 0;
                 mensagemCraft[0] = '\0';
                 tempoMensagemCraft = 0.0f;
+                quantidadeMonstros = 0;
 
                 telaAtual = TELA_JOGO;
                 tempoTela = 0.0f;
@@ -1458,7 +1459,7 @@ int main(void)
 
         // Câmera segue o jogador
         camera.target = jogador;
-        camera.zoom += GetMouseWheelMove() * 0.1f;
+        if(!invAberto && !craftingAberto && !lavaAberta) camera.zoom += GetMouseWheelMove() * 0.1f;
         if (camera.zoom < 0.5f) camera.zoom = 0.5f;
         if (camera.zoom > 3.0f) camera.zoom = 3.0f;
 
@@ -1597,6 +1598,10 @@ int main(void)
                                 }
                             }
                         }
+                    }
+                }
+                if (ferramentaAtual.poderMineracao > 0) {
+                    if (ferramentaAtual.tipo == ITEM_PICARETA){
                         for (Recursos *a = ferroAtivos; a != NULL; a = a->proximo) {
         
                             if (a->quebrado) continue;
@@ -1625,6 +1630,10 @@ int main(void)
                                 }
                             }
                         }
+                    }
+                }
+                if (ferramentaAtual.poderMineracao > 0) {
+                    if (ferramentaAtual.tipo == ITEM_PICARETA){
                         for (Recursos *a = ouroAtivos; a != NULL; a = a->proximo) {
         
                             if (a->quebrado) continue;
@@ -1653,6 +1662,10 @@ int main(void)
                                 }
                             }
                         }
+                    }
+                }
+                if (ferramentaAtual.poderMineracao > 0) {
+                    if (ferramentaAtual.tipo == ITEM_PICARETA){
                         for (Recursos *a = diamanteAtivos; a != NULL; a = a->proximo) {
         
                             if (a->quebrado) continue;
