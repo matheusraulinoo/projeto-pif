@@ -65,18 +65,18 @@ static const char *tierArquivo[TIER_COUNT] = {
 
 int tierDamage[TIER_COUNT] = {
     [TIER_MADEIRA]   = 4,
-    [TIER_PEDRA]     = 5,
-    [TIER_FERRO]     = 6,
-    [TIER_OURO]      = 4,
-    [TIER_DIAMANTE]  = 7,
-    [TIER_MAGNETITA] = 8,
+    [TIER_PEDRA]     = 6,
+    [TIER_FERRO]     = 8,
+    [TIER_OURO]      = 12,
+    [TIER_DIAMANTE]  = 15,
+    [TIER_MAGNETITA] = 20,
 };
 
 int tierDurability[TIER_COUNT] = {
     [TIER_MADEIRA]   = 60,
     [TIER_PEDRA]     = 130,
     [TIER_FERRO]     = 250,
-    [TIER_OURO]      = 30,
+    [TIER_OURO]      = 600,
     [TIER_DIAMANTE]  = 1560,
     [TIER_MAGNETITA] = 2000,
 };

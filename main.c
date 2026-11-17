@@ -835,7 +835,7 @@ int main(void)
     // Escudo equipado separadamente da ferramenta principal
     Slot escudoEquipado = {0};
 
-    /*
+    ///*
     // Kit inicial para testes
     Inv_AddFerramenta(&inv, ITEM_ESPADA, TIER_PEDRA);
     Inv_AddFerramenta(&inv, ITEM_ESPADA, TIER_FERRO);
@@ -844,7 +844,7 @@ int main(void)
     Inv_AddFerramenta(&inv, ITEM_PICARETA, TIER_OURO);
     Inv_AddFerramenta(&inv, ITEM_MACHADO, TIER_DIAMANTE);
     Inv_AddFerramenta(&inv, ITEM_ESPADA, TIER_MAGNETITA);
-    */
+    //*/
 
     // Inicializa a ferramenta equipada
     Ferramenta ferramentaAtual = ObterFerramenta(
@@ -1217,6 +1217,8 @@ int main(void)
             numDiamante++;
         }
     }
+
+    //TO DO: garantir que tenha plo menos 1 de cada minerio
     
     int dentro = 0;                          // 0 = fora, 1 = dentro do local
     LocalAtual localAtual = LOCAL_ILHA;
@@ -1227,7 +1229,7 @@ int main(void)
     Recursos *ouroAtivos = NULL;         // ouro do mapa atual (NULL dentro de casa/ilha)
     Recursos *diamanteAtivos = NULL;         // diamante do mapa atual (NULL dentro de casa/ilha)
 
-    int dia = 1;                             // contador de dias
+    int dia = 21;                             // contador de dias
 
     TelaJogo telaAtual = TELA_INICIO;
     float tempoTela  = 0.0f;
