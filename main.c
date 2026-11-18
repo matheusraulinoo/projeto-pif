@@ -2500,7 +2500,9 @@ int main(void)
                     }
                 }
             EndMode2D();
-            DrawRectangle(0, 0, LARGURA_TELA, ALTURA_TELA, Fade(BLACK, intensidade_noite));
+            if (localAtual == LOCAL_ILHA) {
+                DrawRectangle(0, 0, LARGURA_TELA, ALTURA_TELA, Fade(BLACK, intensidade_noite));
+            }
             // Tela levemente vermelha enquanto toma dano
             if (naAgua) DrawRectangle(0, 0, LARGURA_TELA, ALTURA_TELA, Fade(RED, 0.2f));
 
