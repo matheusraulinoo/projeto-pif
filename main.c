@@ -861,6 +861,9 @@ int main(void)
 
     Inventario inv = {0};
     int invAberto = 0;
+    int origemInv = -1;
+    const int invX = (LARGURA_TELA - INV_LARGURA) / 2;
+    const int invY = (ALTURA_TELA - INV_ALTURA) / 2;
 
     // Escudo equipado separadamente da ferramenta principal
     Slot escudoEquipado = {0};
@@ -1359,6 +1362,7 @@ int main(void)
                 inv = (Inventario){0};
                 escudoEquipado = (Slot){0};
                 invAberto = 0;
+                origemInv = -1;
                 craftingAberto = 0;
                 receitaSelecionada = 0;
                 mensagemCraft[0] = '\0';
@@ -1555,6 +1559,7 @@ int main(void)
             cooldownAtaque <= 0.0f &&
             !invAberto &&
             !craftingAberto &&
+            !IsKeyPressed(KEY_TAB) &&
             timerSlash <= 0.0f) {
 
             Vector2 mouseMundo = GetScreenToWorld2D(
@@ -1818,8 +1823,12 @@ int main(void)
         if (IsKeyPressed(KEY_TAB))
         {
             invAberto = !invAberto;
-            if (invAberto) craftingAberto = 0;
+            if (invAberto) {
+                craftingAberto = 0;
+                lavaAberta = 0;
+            }
         }
+        if (!invAberto) origemInv = -1;
         if (tempoMensagemLava > 0.0f) tempoMensagemLava -= dt;
 
         int pertoLava = PertoDeTile(mapa, jogador, 'a', 48.0f);
@@ -1856,8 +1865,28 @@ int main(void)
             tempoMensagemLava = 2.0f;
         }
 
-        for (int k = 0; k < INV_COLS; k++)
-            if (IsKeyPressed(KEY_ONE + k)) inv.selecionado = k;
+        if (invAberto && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            int destino = Inv_SlotNoPonto(invX, invY, GetMousePosition());
+            if (destino >= 0) {
+                if (origemInv >= 0) {
+                    if (origemInv != destino) Inv_TrocarSlots(&inv, origemInv, destino);
+                    origemInv = -1;
+                } else if (inv.slots[destino].tipo != ITEM_VAZIO) {
+                    origemInv = destino;
+                }
+            }
+        }
+
+        for (int k = 0; k < INV_COLS; k++) {
+            if (!IsKeyPressed(KEY_ONE + k)) continue;
+            if (origemInv >= 0) {
+                if (origemInv != k) Inv_TrocarSlots(&inv, origemInv, k);
+                origemInv = -1;
+            } else {
+                inv.selecionado = k;
+            }
+            break;
+        }
 
         // Atualiza a ferramenta equipada conforme o slot selecionado
         ferramentaAtual = ObterFerramenta(
@@ -2553,16 +2582,14 @@ int main(void)
                 }
             }
 
-            int invX = (LARGURA_TELA - INV_LARGURA) / 2;
-
             if (invAberto) {
-                int invY = (ALTURA_TELA - INV_ALTURA) / 2;
                 DrawRectangle(invX - INV_PAD, invY - INV_PAD,
                             INV_LARGURA + 2 * INV_PAD, INV_ALTURA + 2 * INV_PAD,
                             Fade(BLACK, 0.6f));
-                Inv_Draw(&inv, invX, invY, INV_ROWS);
+                Inv_Draw(&inv, invX, invY, INV_ROWS, origemInv);
+                DrawText("Clique em um item e no destino | 1-9: enviar para a barra", invX, invY - 24, 16, WHITE);
             } else {
-                Inv_Draw(&inv, invX, ALTURA_TELA - SLOT_TAM - 10, 1);
+                Inv_Draw(&inv, invX, ALTURA_TELA - SLOT_TAM - 10, 1, -1);
             }
 
             DrawText(

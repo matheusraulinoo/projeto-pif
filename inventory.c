@@ -223,14 +223,38 @@ void DesenharIcone(TipoItem tipo, int tier, Rectangle caixa) {
     }
 }
 
-void Inv_Draw(Inventario *inv, int startX, int startY, int linhas) {
+static Rectangle Inv_RetanguloSlot(int startX, int startY, int slot) {
+    return (Rectangle){
+        startX + (slot % INV_COLS) * SLOT_PASSO,
+        startY + (slot / INV_COLS) * SLOT_PASSO,
+        SLOT_TAM,
+        SLOT_TAM
+    };
+}
+
+static int Inv_SlotNoPonto(int startX, int startY, Vector2 ponto) {
+    for (int i = 0; i < INV_SIZE; i++) {
+        if (CheckCollisionPointRec(ponto, Inv_RetanguloSlot(startX, startY, i))) return i;
+    }
+    return -1;
+}
+
+static void Inv_TrocarSlots(Inventario *inv, int origem, int destino) {
+    Slot item = inv->slots[origem];
+    inv->slots[origem] = inv->slots[destino];
+    inv->slots[destino] = item;
+}
+
+void Inv_Draw(Inventario *inv, int startX, int startY, int linhas, int origem) {
     for (int i = 0; i < INV_COLS * linhas; i++) {
-        int x = startX + (i % INV_COLS) * SLOT_PASSO;
-        int y = startY + (i / INV_COLS) * SLOT_PASSO;
+        Rectangle retangulo = Inv_RetanguloSlot(startX, startY, i);
+        int x = (int)retangulo.x;
+        int y = (int)retangulo.y;
         Slot s = inv->slots[i];
 
-        DrawRectangle(x, y, SLOT_TAM, SLOT_TAM, DARKGRAY);
-        DrawRectangleLines(x, y, SLOT_TAM, SLOT_TAM, i == inv->selecionado ? YELLOW : BLACK);
+        DrawRectangleRec(retangulo, DARKGRAY);
+        if (i == origem) DrawRectangleLinesEx(retangulo, 3.0f, SKYBLUE);
+        else DrawRectangleLines(x, y, SLOT_TAM, SLOT_TAM, i == inv->selecionado ? YELLOW : BLACK);
 
         if (s.tipo != ITEM_VAZIO) {
 
