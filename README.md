@@ -1,8 +1,21 @@
 <div align="center">
-  <img width="472" height="325" alt="Tela inicial do Scary Nights" src="https://github.com/user-attachments/assets/248b9fda-4130-4b08-9b77-1b98c19600df" />
+  <img width="472" height="325" alt="Tela inicial do Scary Nights" src="https://github.com/user-attachments/assets/443c8d07-549d-4df8-844c-38419482965d" />
 </div>
 
-# 🌙 Scary Nights
+<div align="center">
+<pre>
+  _____                        _   _ _       _     _       
+ / ____|                      | \ | (_)     | |   | |      
+| (___   ___ __ _ _ __ _   _  |  \| |_  __ _| |__ | |_ ___ 
+ \___ \ / __/ _` | '__| | | | | . ` | |/ _` | '_ \| __/ __|
+ ____) | (_| (_| | |  | |_| | | |\  | | (_| | | | | |_\__ \
+|_____/ \___\__,_|_|   \__, | |_| \_|_|\__, |_| |_|\__|___/
+                        __/ |           __/ |              
+                       |___/           |___/               
+</pre>
+</div>
+
+# Scary Nights
 
 ![Linguagem](https://img.shields.io/badge/linguagem-C-blue)
 ![Biblioteca](https://img.shields.io/badge/raylib-5.0%2B-black)
@@ -51,8 +64,8 @@ Na tela inicial, aperte `ENTER` para começar.
 Clone o repositório e entre na pasta:
 
 ```bash
-git clone https://github.com/SEU-USUARIO/scary-nights.git
-cd scary-nights
+git clone https://github.com/matheusraulinoo/projeto-pif.git
+cd projeto-pif
 ```
 
 O `main.c` já inclui os outros arquivos `.c`, então basta compilar apenas ele. Execute o jogo sempre **a partir da pasta do projeto**, pois ele carrega imagens e mapas por caminho relativo.
@@ -108,6 +121,7 @@ scary-nights/
 ├── main.c          # Loop principal, mapas, ciclo dia/noite, combate e telas
 ├── entities.c      # Itens, inventário, ferramentas, monstros e recursos
 ├── crafting.c      # Receitas e interface de crafting
+├── inventory.c     # Inventário e barra de atalhos
 ├── mapa.txt        # Mapa da ilha
 ├── casa.txt        # Mapa da casa
 ├── caverna.txt     # Mapa da caverna
@@ -128,8 +142,9 @@ scary-nights/
 ## 👥 Créditos
 
 Desenvolvido por:
- - **Ana Luiza Carvalho Xavier**.
- - **João Carlos Soares Sampaio**.
- - **Matheus Raulino de Souza Moreira**.
+
+- **Ana Luiza Carvalho Xavier**
+- **João Carlos Soares Sampaio**
+- **Matheus Raulino de Souza Moreira**
 
 Feito com [raylib](https://www.raylib.com/), de Ramon Santamaria (@raysan5).
