@@ -29,8 +29,8 @@
 #define TILE_PORTA_CASA   7
 #define TILE_PORTA_CAVERNA 8
 
-#define CASA_SPAWN_X (52 * TILE + TILE / 2.0f)
-#define CASA_SPAWN_Y (38 * TILE + TILE / 2.0f)
+#define CASA_SPAWN_X    (52 * TILE + TILE / 2.0f)
+#define CASA_SPAWN_Y    (38 * TILE + TILE / 2.0f)
 #define CAVERNA_SPAWN_X (94 * TILE + TILE / 2.0f)
 #define CAVERNA_SPAWN_Y (71 * TILE + TILE / 2.0f)
 
@@ -77,6 +77,8 @@
 #define DURACAO_TELA_MORTE 4.0f  // segundos na tela de morte antes de renascer
 #define NUM_ESTRELAS       90
 
+#define ARQUIVO_RECORDE "recorde.txt"
+
 #define LAVA_CUSTO 5
 
 int lavaAberta = 0;
@@ -103,6 +105,23 @@ int quantidadeMonstros = 0;
 
 float timerSpawn = 0.0f;
 float intervaloSpawn = 5.0f; // um monstro a cada 2 segundos
+static int CarregarRecorde(void){
+    FILE *f = fopen(ARQUIVO_RECORDE, "r");
+    if (f == NULL) return 0;
+
+    int record = 0;
+    if(fscanf(f, "%d", &record) != 1) record = 0;
+    fclose(f);
+    return record;
+}
+
+static void SalvarRecorde(int record){
+    FILE *f = fopen(ARQUIVO_RECORDE, "w");
+    if (f == NULL) return;
+
+    fprintf(f, "%d\n", record);
+    fclose(f);
+}
 
 static int ColideComParede(char mapa[LINHAS][COLS], Vector2 centro, float raio)
 {
@@ -731,7 +750,7 @@ static void DesenhaTelaInicio(float tempo)
     DesenhaVinheta(BLACK, 1.0f);
 }
 
-static void DesenhaTelaMorte(float tempoMorte, float tempoRestante, int dia)
+static void DesenhaTelaMorte(float tempoMorte, float tempoRestante, int dia, int recorde, int novoRecorde)
 {
     float entrada = Limitar01(tempoMorte / 0.8f);
     float pulso   = 0.5f + 0.5f * sinf(tempoMorte * 4.5f);
@@ -805,8 +824,20 @@ static void DesenhaTelaMorte(float tempoMorte, float tempoRestante, int dia)
     if (tempoMorte >= 1.0f)
     {
         float pisca = 0.4f + 0.6f * (0.5f + 0.5f * sinf(tempoMorte * 3.0f));
-        DesenhaTextoCentralizado("ENTER PARA RENASCER AGORA", 382.0f, 12.0f, 2.0f,
+        DesenhaTextoCentralizado("ENTER PARA RENASCER AGORA", 382.0f, 12.0f, 2.0f,    
                                  Fade((Color){ 140, 130, 145, 255 }, pisca * entrada));
+    }
+    if (novoRecorde)
+    {
+        DesenhaTextoCentralizado("NOVO RECORDE!", 290.0f, 15.0f, 2.0f,
+                                 Fade((Color){ 255, 205, 60, 255 }, (0.6f + 0.4f * pulso) * entrada));
+    }
+    else
+    {
+        char textoRecorde[64];
+        snprintf(textoRecorde, sizeof(textoRecorde), "RECORDE: %d", recorde);
+        DesenhaTextoCentralizado(textoRecorde, 290.0f, 15.0f, 2.0f,
+                                 Fade((Color){ 200, 170, 90, 255 }, entrada));
     }
 }
 
@@ -1305,6 +1336,8 @@ int main(void)
     Recursos *diamanteAtivos = NULL;         // diamante do mapa atual (NULL dentro de casa/ilha)
 
     int dia = 1;                             // contador de dias
+    int recorde = CarregarRecorde();
+    int novoRecorde = 0;
 
     TelaJogo telaAtual = TELA_INICIO;
     float tempoTela  = 0.0f;
@@ -1378,7 +1411,7 @@ int main(void)
 
             BeginTextureMode(tela);
                 ClearBackground(BLACK);
-                DesenhaTelaMorte(tempoMorte, DURACAO_TELA_MORTE - tempoMorte, dia);
+                DesenhaTelaMorte(tempoMorte, DURACAO_TELA_MORTE - tempoMorte, dia, recorde, novoRecorde);
             ApresentarTela(tela, destinoTela);
 
             continue;
@@ -1940,6 +1973,13 @@ int main(void)
             vida = 0.0f;
             telaAtual = TELA_MORTE;
             tempoMorte = 0.0f;
+
+            novoRecorde = (dia > recorde);
+            if(novoRecorde) 
+            {
+                recorde = dia;
+                SalvarRecorde(recorde);
+            }
         }
         //logica de spawn de monstros
         if ((isNoite && localAtual != LOCAL_CASA) || localAtual == LOCAL_CAVERNA){
@@ -2637,6 +2677,10 @@ int main(void)
         ApresentarTela(tela, destinoTela);
     }
 
+    if(dia > recorde) {
+        recorde = dia;
+        SalvarRecorde(recorde);
+    }
     // --- DESCARREGAR RECURSOS ---
         // --- DESCARREGAR RECURSOS ---
     Itens_Unload();
