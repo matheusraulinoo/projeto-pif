@@ -1117,7 +1117,7 @@ static void DesenhaTelaInicio(float tempo, Texture2D texturaPersonagem, int reco
                         (Color){ 164, 38, 33, 255 },
                         (Color){ 74, 16, 15, 235 }, 4.7f);
 
-    DesenhaTextoComSombra("a ilha não dorme.", 56.0f, 177.0f, 16.0f, 0.6f,
+    DesenhaTextoComSombra("a ilha não dorme.", 56.0f, 172.0f, 20.0f, 2.0f,
                           (Color){ 142, 132, 124, 255 });
 
     // Chamada para começar, discreta, junto do título.
@@ -1129,14 +1129,14 @@ static void DesenhaTelaInicio(float tempo, Texture2D texturaPersonagem, int reco
                               Fade((Color){ 150, 140, 126, 255 },
                                    0.45f + 0.35f * respira));
 
-    Vector2 medidaEnter = MeasureTextEx(GetFontDefault(), "ENTER", 13.0f, 1.5f);
+    Vector2 medidaEnter = MeasureTextEx(GetFontDefault(), "ENTER", 10.0f, 2.0f);
     DrawTextEx(GetFontDefault(), "ENTER",
                (Vector2){ tecla.x + (tecla.width - medidaEnter.x) / 2.0f,
-                          tecla.y + 5.0f },
-               13.0f, 1.5f,
+                          tecla.y + 8.0f },
+               10.0f, 2.0f,
                Fade((Color){ 224, 216, 200, 255 }, 0.7f + 0.3f * respira));
 
-    DesenhaTextoComSombra("começar", 130.0f, 219.0f, 15.0f, 0.4f,
+    DesenhaTextoComSombra("começar", 130.0f, 217.0f, 20.0f, 2.0f,
                           Fade((Color){ 190, 180, 165, 255 }, respira));
 
     // Recorde / primeira partida.
@@ -1146,14 +1146,14 @@ static void DesenhaTelaInicio(float tempo, Texture2D texturaPersonagem, int reco
     else
         snprintf(linhaRecorde, sizeof(linhaRecorde), "primeira noite");
 
-    DesenhaTextoComSombra(linhaRecorde, 54.0f, 381.0f, 13.0f, 0.5f,
+    DesenhaTextoComSombra(linhaRecorde, 54.0f, 378.0f, 10.0f, 2.0f,
                           (Color){ 132, 119, 96, 255 });
 
     DesenhaTextoComSombra("WASD mover     F interagir     TAB inventário",
-                          54.0f, 403.0f, 12.0f, 0.8f,
+                          54.0f, 400.0f, 10.0f, 2.0f,
                           (Color){ 124, 118, 110, 255 });
     DesenhaTextoComSombra("C crafting     F11 tela cheia     ESC sair",
-                          54.0f, 419.0f, 12.0f, 0.8f,
+                          54.0f, 416.0f, 10.0f, 2.0f,
                           (Color){ 124, 118, 110, 255 });
 }
 
