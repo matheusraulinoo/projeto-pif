@@ -68,7 +68,7 @@ void DesenharRankingUI(EntradaRanking ranking[MAX_RANKING], int startX, int star
 
     for (int i = 0; i < MAX_RANKING; i++) {
         char linha[64];
-        snprintf(linha, sizeof(linha), "%d. %-12s %d pts", i + 1, ranking[i].nome, ranking[i].pontuacao);
+        snprintf(linha, sizeof(linha), "%d. %-12s %d dia", i + 1, ranking[i].nome, ranking[i].pontuacao);
 
         Color cor = (i == 0) ? GOLD : WHITE;
         DrawText(linha, startX, startY + 30 + (i * 25), 16, cor);

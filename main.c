@@ -75,7 +75,7 @@
 #define ESCURIDAO_MAXIMA 0.75f   // opacidade máxima da noite (0 = sem escuro, 1 = preto)
 
 // Telas do jogo
-#define DURACAO_TELA_MORTE 4.0f  // segundos na tela de morte antes de voltar ao menu
+#define DURACAO_TELA_MORTE 10.0f  // segundos na tela de morte (tempo para digitar o nome)
 #define NUM_ESTRELAS       90
 
 #define ARQUIVO_RECORDE "recorde.txt"
