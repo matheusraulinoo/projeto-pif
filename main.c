@@ -535,6 +535,11 @@ bool AtingidoPorSlash(
     return produtoEscalar >= limiteAngulo;
 }
 
+// Cada minério exige no minimo a picareta do tier indicado
+static int PicaretaPodeQuebrar(Ferramenta ferramenta, TierItem tierMinimo) {
+    return ferramenta.tipo == ITEM_PICARETA && ferramenta.tier >= tierMinimo;
+}
+
 // ============================================================
 //  TELAS DE INÍCIO E MORTE
 // ============================================================
@@ -2183,7 +2188,7 @@ int main(void)
                     }
                 }
                 if (ferramentaAtual.poderMineracao > 0) {
-                    if (ferramentaAtual.tipo == ITEM_PICARETA){
+                    if (PicaretaPodeQuebrar(ferramentaAtual, TIER_PEDRA)) {
                         for (Recursos *a = ferroAtivos; a != NULL; a = a->proximo) {
         
                             if (a->quebrado) continue;
@@ -2215,7 +2220,7 @@ int main(void)
                     }
                 }
                 if (ferramentaAtual.poderMineracao > 0) {
-                    if (ferramentaAtual.tipo == ITEM_PICARETA){
+                    if (PicaretaPodeQuebrar(ferramentaAtual, TIER_FERRO)) {
                         for (Recursos *a = ouroAtivos; a != NULL; a = a->proximo) {
         
                             if (a->quebrado) continue;
@@ -2247,7 +2252,7 @@ int main(void)
                     }
                 }
                 if (ferramentaAtual.poderMineracao > 0) {
-                    if (ferramentaAtual.tipo == ITEM_PICARETA){
+                    if (PicaretaPodeQuebrar(ferramentaAtual, TIER_OURO)) {
                         for (Recursos *a = diamanteAtivos; a != NULL; a = a->proximo) {
         
                             if (a->quebrado) continue;
