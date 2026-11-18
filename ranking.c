@@ -23,3 +23,12 @@ void CarregarRanking(EntradaRanking ranking[MAX_RANKING]) {
     }
     fclose(f);
 }
+void SalvarRanking(EntradaRanking ranking[MAX_RANKING]) {
+    FILE *f = fopen("ranking.txt", "w");
+    if (f == NULL) return;
+
+    for (int i = 0; i < MAX_RANKING; i++) {
+        fprintf(f, "%s %d\n", ranking[i].nome, ranking[i].pontuacao);
+    }
+    fclose(f);
+}
