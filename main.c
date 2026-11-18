@@ -988,6 +988,36 @@ int main(void)
             .resultado = ITEM_MACHADO, .qtdResultado = 1, .tier = TIER_MAGNETITA,
             .ing = { { ITEM_MAGNETITA, 3 }, { ITEM_GRAVETO, 2 } }, .totalIng = 2
         },
+        {
+            .nome = "Escudo de Madeira",
+            .resultado = ITEM_ESCUDO, .qtdResultado = 1, .tier = TIER_MADEIRA,
+            .ing = { { ITEM_MADEIRA, 4 } }, .totalIng = 1
+        },
+        {
+            .nome = "Escudo de Pedra",
+            .resultado = ITEM_ESCUDO, .qtdResultado = 1, .tier = TIER_PEDRA,
+            .ing = { { ITEM_PEDRA, 4 } }, .totalIng = 1
+        },
+        {
+            .nome = "Escudo de Ferro",
+            .resultado = ITEM_ESCUDO, .qtdResultado = 1, .tier = TIER_FERRO,
+            .ing = { { ITEM_FERRO, 4 } }, .totalIng = 1
+        },
+        {
+            .nome = "Escudo de Ouro",
+            .resultado = ITEM_ESCUDO, .qtdResultado = 1, .tier = TIER_OURO,
+            .ing = { { ITEM_OURO, 4 } }, .totalIng = 1
+        },
+        {
+            .nome = "Escudo de Diamante",
+            .resultado = ITEM_ESCUDO, .qtdResultado = 1, .tier = TIER_DIAMANTE,
+            .ing = { { ITEM_DIAMANTE, 4 } }, .totalIng = 1
+        },
+        {
+            .nome = "Escudo de Magnetita",
+            .resultado = ITEM_ESCUDO, .qtdResultado = 1, .tier = TIER_MAGNETITA,
+            .ing = { { ITEM_MAGNETITA, 4 } }, .totalIng = 1
+        },
     };
     int totalReceitas = (int)(sizeof(receitasCraft) / sizeof(receitasCraft[0]));
     int receitaSelecionada = 0;
