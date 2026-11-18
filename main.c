@@ -1149,7 +1149,7 @@ static void DesenhaTelaInicio(float tempo, Texture2D texturaPersonagem, int reco
     DesenhaTextoComSombra(linhaRecorde, 54.0f, 381.0f, 13.0f, 0.5f,
                           (Color){ 132, 119, 96, 255 });
 
-    DesenhaTextoComSombra("WASD mover     E coletar     TAB inventário",
+    DesenhaTextoComSombra("WASD mover     F interagir     TAB inventário",
                           54.0f, 403.0f, 12.0f, 0.8f,
                           (Color){ 124, 118, 110, 255 });
     DesenhaTextoComSombra("C crafting     F11 tela cheia     ESC sair",
