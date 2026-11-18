@@ -1,11 +1,6 @@
 #include <stdio.h>
-
-#define MAX_RANKING 5
-
-typedef struct {
-    char nome[32];
-    int pontuacao;
-} EntradaRanking;
+#include "raylib.h"
+#include "ranking.h"
 
 void CarregarRanking(EntradaRanking ranking[MAX_RANKING]) {
     for (int i = 0; i < MAX_RANKING; i++) {
