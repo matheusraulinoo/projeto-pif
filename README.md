@@ -25,6 +25,8 @@
 
 Você está preso em uma ilha onde monstros aparecem toda noite. Seu objetivo é se fortalecer com armas e escudos cada vez melhores para sobreviver o máximo de noites possível, enquanto os monstros ficam mais fortes a cada dia que passa.
 
+[Assista à demonstração do jogo no YouTube](https://youtu.be/cQjSzOFKz6Q)
+
 ## ✨ Funcionalidades
 
 - **Ciclo de dia e noite:** os monstros aparecem quando a noite chega.
