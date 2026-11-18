@@ -355,6 +355,23 @@ int Inv_Remover(Inventario *inv, TipoItem tipo, int qtd) {
     return 1;
 }
 
+// Descarta itens de um slot específico; retorna quantos foram removidos.
+int Inv_DescartarSlot(Inventario *inv, int slot, int qtd) {
+    if (slot < 0 || slot >= INV_SIZE || qtd <= 0) return 0;
+
+    Slot *s = &inv->slots[slot];
+    if (s->tipo == ITEM_VAZIO) return 0;
+
+    int removidos;
+    if(qtd < s->quant){
+        removidos = qtd;
+    }
+    s->quant -= removidos;
+
+    if (s->quant <= 0) *s = (Slot){0};
+    return removidos;
+}
+
 void Itens_Unload(void) {
     for (int i = 1; i < ITEM_COUNT; i++) {
         UnloadTexture(itens[i].textura);
