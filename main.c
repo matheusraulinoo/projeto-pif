@@ -1469,11 +1469,6 @@ int main(void)
                     localAtual = LOCAL_ILHA;
                 }
             }
-            arvoresAtivas = NULL;
-            pedrasAtivas = NULL;
-            ferroAtivos = NULL;
-            ouroAtivos = NULL;
-            diamanteAtivos = NULL;
         }
 
         if(TileEm(mapa, jogador) == TILE_PORTA_CAVERNA)
@@ -1496,12 +1491,13 @@ int main(void)
                     localAtual = LOCAL_ILHA;
                 }
             }
-            arvoresAtivas = dentro ? NULL : arvores;
-            pedrasAtivas = dentro ? pedras : NULL;
-            ferroAtivos = dentro ? ferros : NULL;
-            ouroAtivos = dentro ? ouros : NULL;
-            diamanteAtivos = dentro ? diamantes : NULL;
         }
+
+        arvoresAtivas = localAtual == LOCAL_ILHA ? arvores : NULL;
+        pedrasAtivas = localAtual == LOCAL_CAVERNA ? pedras : NULL;
+        ferroAtivos = localAtual == LOCAL_CAVERNA ? ferros : NULL;
+        ouroAtivos = localAtual == LOCAL_CAVERNA ? ouros : NULL;
+        diamanteAtivos = localAtual == LOCAL_CAVERNA ? diamantes : NULL;
 
         // Direção e animação do personagem
         int andando = 0;
