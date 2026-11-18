@@ -1,6 +1,6 @@
 #include "raylib.h"
 #include <stdio.h>
-#include "inventory.c"
+#include "inventory.h"
 
 typedef struct {
     TipoItem tipo;

@@ -1,62 +1,7 @@
-#include "raylib.h"
 #include <stdio.h>
+#include "inventory.h"
 #include "raymath.h"
 
-#define SLOT_TAM      64
-#define SLOT_GAP      6
-#define SLOT_PASSO    (SLOT_TAM + SLOT_GAP)
-#define ICONE_MARGEM  (SLOT_TAM / 16)
-#define ICONE_TAM     (SLOT_TAM - 2 * ICONE_MARGEM)
-#define INV_PAD       10
-#define INV_LARGURA   (INV_COLS * SLOT_PASSO - SLOT_GAP)
-#define INV_ALTURA    (INV_ROWS * SLOT_PASSO - SLOT_GAP)
-#define INV_COLS 9
-#define INV_ROWS 4
-#define INV_SIZE (INV_COLS * INV_ROWS)
-#define MAX_STACK 64
-
-// Definição dos tipos de itens
-typedef enum {
-    ITEM_VAZIO = 0,
-    ITEM_MADEIRA,
-    ITEM_GRAVETO,
-    ITEM_PEDRA,
-    ITEM_FERRO,
-    ITEM_OURO,
-    ITEM_DIAMANTE,
-    ITEM_MAGNETITA,
-    ITEM_ESPADA,
-    ITEM_MACHADO,
-    ITEM_PICARETA,
-    ITEM_ESCUDO,
-    ITEM_COUNT // Total de tipos de itens
-} TipoItem;
-
-typedef enum {
-    TIER_MADEIRA,
-    TIER_PEDRA,
-    TIER_FERRO,
-    TIER_OURO,
-    TIER_DIAMANTE,
-    TIER_MAGNETITA,
-    TIER_COUNT // Total de tiers
-} TierItem;
-
-// Estrutura de um item do inventário
-typedef struct {
-    char nome[32];
-    int maxQuantidade;
-    Color cor;
-    Texture2D textura;
-    Rectangle recorte;
-} Item;
-
-typedef struct {
-    Texture2D textura;
-    Rectangle recorte;
-} Sprite;
-
-// [tipo da ferramenta][tier]; só as ferramentas usam isso
 Sprite spritesFerramenta[ITEM_COUNT][TIER_COUNT];
 
 static const char *tierArquivo[TIER_COUNT] = {
@@ -89,18 +34,6 @@ Color tierCor[TIER_COUNT] = {
     [TIER_DIAMANTE]  = (Color){0, 191, 255, 255},
     [TIER_MAGNETITA] = (Color){105, 105, 105, 255},
 };
-
-typedef struct {
-    TipoItem tipo;
-    int quant;
-    int tier;  
-    int durability;
-} Slot;
-
-typedef struct {
-    Slot slots[INV_SIZE];
-    int selecionado; // índice do slot atualmente selecionado
-} Inventario;
 
 Item itens[ITEM_COUNT];
 
@@ -223,7 +156,7 @@ void DesenharIcone(TipoItem tipo, int tier, Rectangle caixa) {
     }
 }
 
-static Rectangle Inv_RetanguloSlot(int startX, int startY, int slot) {
+Rectangle Inv_RetanguloSlot(int startX, int startY, int slot) {
     return (Rectangle){
         startX + (slot % INV_COLS) * SLOT_PASSO,
         startY + (slot / INV_COLS) * SLOT_PASSO,
@@ -232,14 +165,14 @@ static Rectangle Inv_RetanguloSlot(int startX, int startY, int slot) {
     };
 }
 
-static int Inv_SlotNoPonto(int startX, int startY, Vector2 ponto) {
+int Inv_SlotNoPonto(int startX, int startY, Vector2 ponto) {
     for (int i = 0; i < INV_SIZE; i++) {
         if (CheckCollisionPointRec(ponto, Inv_RetanguloSlot(startX, startY, i))) return i;
     }
     return -1;
 }
 
-static void Inv_TrocarSlots(Inventario *inv, int origem, int destino) {
+void Inv_TrocarSlots(Inventario *inv, int origem, int destino) {
     Slot item = inv->slots[origem];
     inv->slots[origem] = inv->slots[destino];
     inv->slots[destino] = item;
@@ -385,22 +318,6 @@ void Itens_Unload(void) {
             UnloadTexture(spritesFerramenta[i][t].textura);
     }
 }
-
-typedef struct {
-    TipoItem tipo;
-    TierItem tier;
-
-    int dano;
-    int poderCorte;
-    int poderMineracao;
-
-    float alcanceSlash;
-    float anguloSlash;
-    float intervaloAtaque;
-    float duracaoAnimacao;
-
-    Texture2D textura;
-} Ferramenta;
 
 Ferramenta ObterFerramenta(Slot slot) {
 
