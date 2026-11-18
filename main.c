@@ -1877,13 +1877,13 @@ int main(void)
             DesenhaTelaMorte(tempoMorte, DURACAO_TELA_MORTE - tempoMorte, dia, recorde, novoRecorde);
 
             // Caixa de texto para o jogador digitar o nome
-            DrawRectangle(240, 340, 300, 40, (Color){ 20, 10, 15, 255 });
-            DrawRectangleLines(240, 340, 300, 40, RED);
+            DrawRectangle(530, 330, 250, 40, (Color){ 20, 10, 15, 255 });
+            DrawRectangleLines(530, 330, 250, 40, RED);
 
             if (contadorLetras > 0) {
-                DrawText(nomeDigitado, 250, 350, 20, WHITE);
+                DrawText(nomeDigitado, 540, 340, 20, WHITE);
             }else{
-                DrawText("Digite seu nome e ENTER", 250, 352, 16, GRAY);
+                DrawText("Digite seu nome e ENTER", 540, 342, 16, GRAY);
                 }
 
             ApresentarTela(tela, destinoTela);
