@@ -1,20 +1,7 @@
 #include "raylib.h"
 #include <stdio.h>
 #include "inventory.h"
-
-typedef struct {
-    TipoItem tipo;
-    int qtd;
-} Ingrediente;
-
-typedef struct {
-    const char *nome;       // nome exibido na interface (ex: "Espada de Madeira")
-    TipoItem resultado;
-    int qtdResultado;
-    TierItem tier;
-    Ingrediente ing[4];
-    int totalIng;
-} Receita;
+#include "crafting.h"
 
 static int TemSlotVazio(Inventario *inv) {
     for (int i = 0; i < INV_SIZE; i++)

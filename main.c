@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "entities.h"
 #include "inventory.h"
-#include "crafting.c"
+#include "crafting.h"
 #include "math.h"
 #include "time.h"
 #include "raymath.h"
