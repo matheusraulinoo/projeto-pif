@@ -1278,14 +1278,17 @@ static void ApresentarTela(RenderTexture2D tela, Rectangle destino)
                        destino, (Vector2){ 0, 0 }, 0.0f, WHITE);
     EndDrawing();
 }
-
+char nomeDigitado[32] = "\0";
+int contadorLetras = 0;
 int main(void)
 {
     InitWindow(LARGURA_TELA, ALTURA_TELA, "Scary Nights");
     SetTargetFPS(60);
 
-    Itens_Init();
 
+    Itens_Init();
+    EntradaRanking ranking[MAX_RANKING];
+    CarregarRanking(ranking);
     IniciarEstrelas();
 
     Vector2 jogador = { MAPA_LARGURA / 2.0f, MAPA_ALTURA / 2.0f };
@@ -1773,19 +1776,52 @@ int main(void)
             BeginTextureMode(tela);
                 ClearBackground(BLACK);
                 DesenhaTelaInicio(tempoTela, personagem, recorde);
+                DesenharRankingUI(ranking, 520, 170);
             ApresentarTela(tela, destinoTela);
 
             continue;
         }
 
-        // --- TELA DE MORTE ---
-        if (telaAtual == TELA_MORTE)
+// --- TELA DE MORTE ---
+        else if (telaAtual == TELA_MORTE)
         {
             tempoMorte += dt;
 
-            if ((tempoMorte >= 1.0f && IsKeyPressed(KEY_ENTER)) ||
+            // 1. Captura as letras digitadas pelo jogador
+            int key = GetCharPressed();
+            while (key > 0) {
+                if ((key >= 32) && (key <= 125) && key != ';' && (contadorLetras < 31)) {
+                    nomeDigitado[contadorLetras] = (char)key;
+                    nomeDigitado[contadorLetras + 1] = '\0';
+                    contadorLetras++;
+                }
+                key = GetCharPressed();
+            }
+
+            // Apaga com o Backspace
+            if (IsKeyPressed(KEY_BACKSPACE)) {
+                contadorLetras--;
+                if (contadorLetras < 0) contadorLetras = 0;
+                nomeDigitado[contadorLetras] = '\0';
+            }
+
+            // 2. Condição para salvar no ranking e voltar ao menu (Aperta ENTER com nome ou acaba o tempo)
+            if ((tempoMorte >= 1.0f && IsKeyPressed(KEY_ENTER) && contadorLetras > 0) ||
                 tempoMorte >= DURACAO_TELA_MORTE)
             {
+                // Se o tempo acabou sem digitar nome, salva como "Anônimo" ou o nome atual
+                if (contadorLetras == 0) {
+                    snprintf(nomeDigitado, sizeof(nomeDigitado), "Anonimo");
+                }
+
+                // Salva no ranking!
+                AtualizarRanking(ranking, nomeDigitado, dia);
+
+                // Reseta o nome para a próxima partida
+                nomeDigitado[0] = '\0';
+                contadorLetras = 0;
+
+                // Reseta o mapa e as variáveis da partida...
                 if (dentro && CarregarMapa(MAPA_ILHA, mapa))
                 {
                     dentro = 0;
@@ -1827,16 +1863,29 @@ int main(void)
                 timerAnim = 0.0f;
                 camera.target = jogador;
 
-                // A morte leva de volta à tela de início; só começa outra
-                // run quando o jogador confirmar no menu.
+                // Volta para a tela de início
                 telaAtual = TELA_INICIO;
                 tempoTela = 0.0f;
                 tempoMorte = 0.0f;
             }
 
+            // 3. Desenho da Tela de Morte e da Caixa de Texto
             BeginTextureMode(tela);
-                ClearBackground(BLACK);
-                DesenhaTelaMorte(tempoMorte, DURACAO_TELA_MORTE - tempoMorte, dia, recorde, novoRecorde);
+            ClearBackground(BLACK);
+                
+            // Desenha a tela de morte base
+            DesenhaTelaMorte(tempoMorte, DURACAO_TELA_MORTE - tempoMorte, dia, recorde, novoRecorde);
+
+            // Caixa de texto para o jogador digitar o nome
+            DrawRectangle(240, 340, 300, 40, (Color){ 20, 10, 15, 255 });
+            DrawRectangleLines(240, 340, 300, 40, RED);
+
+            if (contadorLetras > 0) {
+                DrawText(nomeDigitado, 250, 350, 20, WHITE);
+            }else{
+                DrawText("Digite seu nome e ENTER", 250, 352, 16, GRAY);
+                }
+
             ApresentarTela(tela, destinoTela);
 
             continue;
