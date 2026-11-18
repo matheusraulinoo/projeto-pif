@@ -93,29 +93,44 @@ void Itens_Init(void) {
     CarregarFerramenta(ITEM_PICARETA, "picareta");
     CarregarFerramenta(ITEM_ESCUDO,   "escudo");
 }
-
+// Serve para adicionar itens no inventário, se o slot já tiver com itens, ele vai acumulando no inventário, caso esteja vazio, ele adiciona o item naquele slot. 
 int Inv_Add(Inventario *inv, TipoItem id, int amount) {
     if (id == ITEM_VAZIO || itens[id].maxQuantidade <= 1) return amount;
     int max = itens[id].maxQuantidade;
-    // 1) completa stacks existentes
+    
     for (int i = 0; i < INV_SIZE && amount > 0; i++) {
         if (inv->slots[i].tipo == id && inv->slots[i].quant < max) {
             int space = max - inv->slots[i].quant;
-            int add = amount < space ? amount : space;
+            
+            int add;
+            if (amount < space) {
+                add = amount;
+            } else {
+                add = space;
+            }
+
             inv->slots[i].quant += add;
             amount -= add;
         }
     }
-    // 2) usa slots vazios
+    
     for (int i = 0; i < INV_SIZE && amount > 0; i++) {
         if (inv->slots[i].tipo == ITEM_VAZIO) {
-            int add = amount < max ? amount : max;
+            
+            int add;
+            if (amount < max) {
+                add = amount;
+            } else {
+                add = max;
+            }
+
             inv->slots[i].tipo = id;
             inv->slots[i].quant = add;
             amount -= add;
         }
     }
-    return amount; // sobra (0 = tudo coube)
+    
+    return amount; 
 }
 
 int Inv_AddFerramenta(Inventario *inv, TipoItem tipo, TierItem tier) {
@@ -125,7 +140,7 @@ int Inv_AddFerramenta(Inventario *inv, TipoItem tipo, TierItem tier) {
             inv->slots[i].quant = 1;
             inv->slots[i].tier = tier;
             inv->slots[i].durability = tierDurability[tier];
-            return 1; // sucesso
+            return 1; 
         }
     }
     return 0; // inventário cheio
@@ -254,7 +269,6 @@ void Inv_Draw(Inventario *inv, int startX, int startY, int linhas, int origem) {
                     }
                 }
             }
-
             if (s.quant > 1) {
                 DrawText(
                     TextFormat("%d", s.quant),
@@ -275,7 +289,7 @@ int Inv_Contar(Inventario *inv, TipoItem tipo) {
     return total;
 }
 
-// Remove qtd itens; retorna 1 se conseguiu, 0 se não tinha o suficiente
+// Remove qtd itens e retorna 1 se conseguiu, 0 se não tinha o suficiente
 int Inv_Remover(Inventario *inv, TipoItem tipo, int qtd) {
     if (Inv_Contar(inv, tipo) < qtd) return 0;
     for (int i = 0; i < INV_SIZE && qtd > 0; i++) {
@@ -288,7 +302,7 @@ int Inv_Remover(Inventario *inv, TipoItem tipo, int qtd) {
     return 1;
 }
 
-// Descarta itens de um slot específico; retorna quantos foram removidos.
+// Descarta itens de um slot específico e retorna quantos foram removidos.
 int Inv_DescartarSlot(Inventario *inv, int slot, int qtd) {
     if (slot < 0 || slot >= INV_SIZE || qtd <= 0) return 0;
 

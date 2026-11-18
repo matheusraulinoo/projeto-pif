@@ -22,7 +22,7 @@ void inserir_recurso(Recursos **cabeca, Recursos novo) {
 
 
 void quebrar_recurso(Recursos *recurso, int dano) {
-    if (recurso->quebrado) return; // Não dá para quebrar o que já está quebrado
+    if (recurso->quebrado) return; // Não dá para quebrar o que já tá quebrado
 
     recurso->vida -= dano;
 
@@ -42,7 +42,6 @@ void atualiza_recurso(Recursos *cabeca) {
             recurso->tempo_renascimento -= deltaTime;
 
             if (recurso->tempo_renascimento <= 0.0f) {
-                // Renasce a árvore!
                 recurso->quebrado = false;
                 recurso->vida = recurso->vida_maxima;
             }

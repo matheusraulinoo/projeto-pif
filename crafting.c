@@ -8,19 +8,16 @@ static int TemSlotVazio(Inventario *inv) {
         if (inv->slots[i].tipo == ITEM_VAZIO) return 1;
     return 0;
 }
-
-// Confere (sem gastar nada) se a receita pode ser feita agora.
-// Usado pela interface para colorir as receitas disponíveis.
+//verifica se pode craftar, se tem slots vazios para realizar o craft
 int PodeCraftar(Inventario *inv, Receita r) {
     for (int i = 0; i < r.totalIng; i++)
         if (Inv_Contar(inv, r.ing[i].tipo) < r.ing[i].qtd) return 0;
 
-    // ferramentas (stack 1) precisam de um slot livre
     if (itens[r.resultado].maxQuantidade == 1 && !TemSlotVazio(inv)) return 0;
 
     return 1;
 }
-
+//Realiza o crafting das ferramentas, além de verificar se o inventário tá cheio ou não, caso nn esteja adiciona a ferramenta no inventário.
 int Craftar(Inventario *inv, Receita r) {
     for (int i = 0; i < r.totalIng; i++) {
         if (Inv_Contar(inv, r.ing[i].tipo) < r.ing[i].qtd) {
@@ -29,7 +26,6 @@ int Craftar(Inventario *inv, Receita r) {
         }
     }
 
-    //confere se o resultado cabe antes de gastar material
     int ehFerramenta = itens[r.resultado].maxQuantidade == 1;
     if (ehFerramenta && !TemSlotVazio(inv)) {
         printf("Inventario cheio\n");
