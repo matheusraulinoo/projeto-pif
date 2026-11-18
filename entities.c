@@ -51,7 +51,7 @@ void inserir_recurso(Recursos **cabeca, Recursos novo) {
     if (no == NULL) return;
 
     *no = novo;
-    no->proximo = NULL;
+    no->proximo = NULL; 
 
     if (*cabeca == NULL) {
         *cabeca = no;
