@@ -363,12 +363,18 @@ int Inv_DescartarSlot(Inventario *inv, int slot, int qtd) {
     if (s->tipo == ITEM_VAZIO) return 0;
 
     int removidos;
-    if(qtd < s->quant){
+    if (qtd < s->quant) {
         removidos = qtd;
+    } else {
+        removidos = s->quant;
     }
+    
     s->quant -= removidos;
 
-    if (s->quant <= 0) *s = (Slot){0};
+    if (s->quant <= 0) {
+        *s = (Slot){0}; // Limpa o slot completamente se esvaziar
+    }
+    
     return removidos;
 }
 
