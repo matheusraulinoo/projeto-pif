@@ -1,49 +1,6 @@
-#include "raylib.h"
 #include <stdio.h>
 #include <stdlib.h>
-
-typedef struct Recursos {
-    Vector2 posicao;
-    Vector2 offset_colisao;
-    float raio_colisao;
-    int vida;
-    int vida_maxima;
-    bool quebrado;
-    bool colide_quebrado;
-    float tempo_renascimento;
-    float cooldown_renascimento;
-    struct Recursos *proximo; // Ponteiro para o próximo recurso na lista
-}Recursos;
-
-// Tipos de monstros disponíveis
-typedef enum {
-    MONSTRO_SLIME,
-    MONSTRO_ESQUELETO,
-    MONSTRO_CARANGUEJO,
-    TOTAL_TIPOS_MONSTRO
-} TipoMonstro;
-
-typedef struct {
-    TipoMonstro tipo;
-    Vector2 posicao;
-    float velocidade;
-    bool elite;
-
-    float vida;
-    float vida_maxima;
-    float ataque;
-    float defesa;
-    
-    const char *nome;
-    bool morto;
-} Monstro;
-/*
-a ideia é:
-<A ataca B> 
-B.vida -= max(0, A.ataque - B.defesa);
-if B.vida <= 0;
-    B.morto = true;
-*/
+#include "entities.h"
 
 // Cria um nó com os dados de "novo" e o coloca no fim da lista.
 void inserir_recurso(Recursos **cabeca, Recursos novo) {
@@ -103,7 +60,7 @@ void liberar_recursos(Recursos *cabeca) {
     }
 }
 
-static int TemRecursoPerto(Vector2 pos, float distMin, Recursos *lista)
+int TemRecursoPerto(Vector2 pos, float distMin, Recursos *lista)
 {
     for (Recursos *r = lista; r != NULL; r = r->proximo)
     {

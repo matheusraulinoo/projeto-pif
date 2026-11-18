@@ -1,6 +1,6 @@
 #include "raylib.h"
 #include <stdio.h>
-#include "entities.c"
+#include "entities.h"
 #include "crafting.c"
 #include "math.h"
 #include "time.h"
