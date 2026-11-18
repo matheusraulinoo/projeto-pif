@@ -1,5 +1,5 @@
 <div align="center">
-  <img width="472" height="325" alt="Tela inicial do Scary Nights" src="https://github.com/user-attachments/assets/7f2541c0-2211-415f-8ea2-d544b3ffb372" />
+  <img width="472" height="325" alt="Tela inicial do Scary Nights" src="https://github.com/user-attachments/assets/248b9fda-4130-4b08-9b77-1b98c19600df" />
 </div>
 
 # 🌙 Scary Nights
