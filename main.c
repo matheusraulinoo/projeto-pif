@@ -85,7 +85,7 @@ int lavaAberta = 0;
 char mensagemLava[64] = "";
 float tempoMensagemLava = 0.0f;
 Color corMensagemLava = WHITE;
-
+    
 typedef enum {
     TELA_INICIO = 0,
     TELA_JOGO,
