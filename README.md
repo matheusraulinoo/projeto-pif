@@ -1,12 +1,135 @@
-## Scary Nights
-Scary Nights é um jogo de sobrevivência, com elementos de coleta de recursos, crafting e um combate simples. Você é um boneco preso em uma ilha onde monstros aparecem toda noite, e o seu objetivo é se fortalecer com armaduras e armas para sobreviver o maximo de tempo possivel contra os monstros que vão ficando cada vez mais fortes ao longo das noites.
+<div align="center">
+  <img width="472" height="325" alt="Tela inicial do Scary Nights" src="https://github.com/user-attachments/assets/7f2541c0-2211-415f-8ea2-d544b3ffb372" />
+</div>
 
-## Como rodar o projeto:
+# 🌙 Scary Nights
 
- 1) Primeiro rode essa linha de código: 
-    - gcc main.c -o jogo.exe -I C:\raylib\include -L C:\raylib\lib -lraylib -lopengl32 -lgdi32 -lwinmm
+![Linguagem](https://img.shields.io/badge/linguagem-C-blue)
+![Biblioteca](https://img.shields.io/badge/raylib-5.0%2B-black)
+![Plataformas](https://img.shields.io/badge/plataformas-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 
-2) Após isso, rode esse comando para iniciar o jogo:
-    -  .\jogo.exe
+**Scary Nights** é um jogo de sobrevivência 2D em C com [raylib](https://www.raylib.com/), com coleta de recursos, crafting e combate simples.
+
+Você está preso em uma ilha onde monstros aparecem toda noite. Seu objetivo é se fortalecer com armas e escudos cada vez melhores para sobreviver o máximo de noites possível, enquanto os monstros ficam mais fortes a cada dia que passa.
+
+## ✨ Funcionalidades
+
+- **Ciclo de dia e noite:** os monstros aparecem quando a noite chega.
+- **Exploração:** a ilha, uma casa e uma caverna para descobrir.
+- **Coleta de recursos:** corte árvores e minere na caverna.
+- **Crafting:** crie espadas, machados, picaretas e escudos em vários níveis de material.
+- **Combate:** ataque na direção do mouse contra diferentes tipos de monstros, incluindo versões elite.
+- **Durabilidade:** ferramentas e escudos se desgastam com o uso.
+- **Dificuldade progressiva:** os monstros ficam mais fortes a cada dia.
+- **Recorde:** o maior número de dias alcançado fica salvo.
+
+## 🎮 Controles
+
+| Ação | Tecla / Mouse |
+|------|---------------|
+| Mover | `W` `A` `S` `D` ou setas |
+| Atacar / cortar / minerar | Botão esquerdo do mouse |
+| Zoom | Roda do mouse |
+| Inventário | `TAB` |
+| Selecionar item da barra | `1` a `9` |
+| Crafting (dentro da casa) | `C` |
+| Equipar/desequipar escudo | `H` |
+| Interagir | `F` |
+| Tela cheia | `F11` |
+| Sair | `ESC` |
+
+Na tela inicial, aperte `ENTER` para começar.
+
+## 📦 Requisitos
+
+- Compilador C (`gcc` ou `clang`)
+- [raylib](https://github.com/raysan5/raylib) **5.0 ou superior**
+- Git
+
+## 🚀 Como rodar o projeto
+
+Clone o repositório e entre na pasta:
+
+```bash
+git clone https://github.com/SEU-USUARIO/scary-nights.git
+cd scary-nights
+```
+
+O `main.c` já inclui os outros arquivos `.c`, então basta compilar apenas ele. Execute o jogo sempre **a partir da pasta do projeto**, pois ele carrega imagens e mapas por caminho relativo.
+
+### Windows
+
+Instale a raylib pelo [instalador oficial](https://github.com/raysan5/raylib/releases) (neste exemplo, em `C:\raylib`) e rode:
+
+```bash
+gcc main.c -o jogo.exe -I C:\raylib\include -L C:\raylib\lib -lraylib -lopengl32 -lgdi32 -lwinmm
+.\jogo.exe
+```
+
+### macOS
+
+```bash
+brew install raylib
+gcc main.c -o jogo -I/opt/homebrew/include -L/opt/homebrew/lib -lraylib \
+    -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo
+./jogo
+```
+
+> Em Macs com processador Intel, troque `/opt/homebrew` por `/usr/local`.
+
+### Linux
+
+Instale as dependências (exemplo para Debian/Ubuntu) e a raylib 5.0+:
+
+```bash
+sudo apt update
+sudo apt install build-essential git libasound2-dev libx11-dev libxrandr-dev \
+    libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev
+
+git clone https://github.com/raysan5/raylib.git
+cd raylib/src
+make PLATFORM=PLATFORM_DESKTOP
+sudo make install
+cd ../..
+```
+
+Depois compile e execute:
+
+```bash
+gcc main.c -o jogo -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
+./jogo
+```
 
 
+## 🗂️ Estrutura do projeto
+
+```
+scary-nights/
+├── main.c          # Loop principal, mapas, ciclo dia/noite, combate e telas
+├── entities.c      # Itens, inventário, ferramentas, monstros e recursos
+├── crafting.c      # Receitas e interface de crafting
+├── mapa.txt        # Mapa da ilha
+├── casa.txt        # Mapa da casa
+├── caverna.txt     # Mapa da caverna
+├── recorde.txt     # Gerado automaticamente com o melhor dia alcançado
+└── pictures/       # Sprites e imagens dos mapas
+```
+
+## 🛠️ Problemas comuns
+
+| Problema | Solução |
+|----------|---------|
+| `raylib.h: No such file or directory` | Verifique o caminho passado em `-I`. |
+| `cannot find -lraylib` | Verifique o caminho passado em `-L`. |
+| `ToggleBorderlessWindowed` não declarada | Sua raylib é anterior à 5.0. Atualize. |
+| `Nao abriu o arquivo: mapa.txt` | Execute o jogo a partir da pasta do projeto. |
+| Erro de permissão ao compilar no Windows | O jogo ainda está aberto. Feche-o e compile de novo. |
+
+## 👥 Créditos
+
+Desenvolvido por:
+ - **Ana Luiza Carvalho Xavier**.
+ - **João Carlos Soares Sampaio**.
+ - **Matheus Raulino de Souza Moreira**.
+
+Feito com [raylib](https://www.raylib.com/), de Ramon Santamaria (@raysan5).
