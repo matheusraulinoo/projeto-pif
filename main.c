@@ -1426,17 +1426,19 @@ int main(void)
             }
         }
         // Movimento do jogador (bloqueado enquanto o crafting está aberto)
+        // A passagem estreita da caverna precisa de folga para o passo do jogador.
+        float raioMovimento = localAtual == LOCAL_CAVERNA ? 12.0f : 14.0f;
         Vector2 proximo = jogador;
         if (!craftingAberto && !invAberto && !lavaAberta)
         {
             if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) proximo.x += velocidade * dt;
             if (IsKeyDown(KEY_LEFT)  || IsKeyDown(KEY_A)) proximo.x -= velocidade * dt;
-            if (!ColideComParede(mapa, proximo, 14.0f) && !ColideComRecursos(jogador, proximo, 14.0f, arvoresAtivas) && !ColideComRecursos(jogador, proximo, 14.0f, pedrasAtivas) && !ColideComRecursos(jogador, proximo, 14.0f, ferroAtivos) && !ColideComRecursos(jogador, proximo, 14.0f, ouroAtivos) && !ColideComRecursos(jogador, proximo, 14.0f, diamanteAtivos)) jogador.x = proximo.x;
+            if (!ColideComParede(mapa, proximo, raioMovimento) && !ColideComRecursos(jogador, proximo, raioMovimento, arvoresAtivas) && !ColideComRecursos(jogador, proximo, raioMovimento, pedrasAtivas) && !ColideComRecursos(jogador, proximo, raioMovimento, ferroAtivos) && !ColideComRecursos(jogador, proximo, raioMovimento, ouroAtivos) && !ColideComRecursos(jogador, proximo, raioMovimento, diamanteAtivos)) jogador.x = proximo.x;
 
             proximo = jogador;
             if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S)) proximo.y += velocidade * dt;
             if (IsKeyDown(KEY_UP)   || IsKeyDown(KEY_W)) proximo.y -= velocidade * dt;
-            if (!ColideComParede(mapa, proximo, 14.0f) && !ColideComRecursos(jogador, proximo, 14.0f, arvoresAtivas) && !ColideComRecursos(jogador, proximo, 14.0f, pedrasAtivas) && !ColideComRecursos(jogador, proximo, 14.0f, ferroAtivos) && !ColideComRecursos(jogador, proximo, 14.0f, ouroAtivos) && !ColideComRecursos(jogador, proximo, 14.0f, diamanteAtivos)) jogador.y = proximo.y;
+            if (!ColideComParede(mapa, proximo, raioMovimento) && !ColideComRecursos(jogador, proximo, raioMovimento, arvoresAtivas) && !ColideComRecursos(jogador, proximo, raioMovimento, pedrasAtivas) && !ColideComRecursos(jogador, proximo, raioMovimento, ferroAtivos) && !ColideComRecursos(jogador, proximo, raioMovimento, ouroAtivos) && !ColideComRecursos(jogador, proximo, raioMovimento, diamanteAtivos)) jogador.y = proximo.y;
         }
 
         // Limita o jogador dentro do mapa
