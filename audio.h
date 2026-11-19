@@ -6,11 +6,13 @@
 extern Sound sndAmanhecer;
 extern Sound sndAndarCasa;
 extern Sound sndAndarIlha;
+extern Sound sndAndarCaverna;
 extern Sound sndApanhar;
 extern Sound sndAtingiu;
 extern Sound sndBater;
 extern Sound sndCraft;
 extern Sound sndEntrarCasa;
+extern Sound sndEntrarCaverna;
 extern Sound sndEscudo;
 extern Sound sndMorrer;
 extern Sound sndSelecionar;

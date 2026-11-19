@@ -391,7 +391,7 @@ int main(void)
                     dentro = 1;
                     jogador = (Vector2){ CAVERNA_SPAWN_X, CAVERNA_SPAWN_Y };
                     localAtual = LOCAL_CAVERNA;
-                    TocarSom(sndEntrarCasa);
+                    TocarSom(sndEntrarCaverna);
                 }
             }
             else
@@ -401,7 +401,7 @@ int main(void)
                     dentro = 0;
                     jogador = posAntesDeEntrar;
                     localAtual = LOCAL_ILHA;
-                    TocarSom(sndEntrarCasa);
+                    TocarSom(sndEntrarCaverna);
                 }
             }
         }
@@ -435,6 +435,7 @@ int main(void)
             if (timerPassos <= 0.0f)
             {
                 if (localAtual == LOCAL_CASA) TocarSom(sndAndarCasa);
+                else if (localAtual == LOCAL_CAVERNA) TocarSom(sndAndarCaverna);
                 else TocarSom(sndAndarIlha);
                 timerPassos = 0.38f;
             }
