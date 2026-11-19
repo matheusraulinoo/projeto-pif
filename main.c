@@ -13,6 +13,7 @@
 #include "hud.h"
 #include "telas.h"
 #include "interacao.h"
+
 // Ao modificar o codigo, o projeto deve ser recompilado para que as alterações tenham efeito.
 // comando pra fazer isso: gcc *.c -o jogo.exe -I C:\raylib\include -L C:\raylib\lib -lraylib -lopengl32 -lgdi32 -lwinmm
 // certifique-se de que o jogo previamente aberto foi fechado antes de recompilar.

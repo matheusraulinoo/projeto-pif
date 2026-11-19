@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
-#include "raymath.h"
 #include "entities.h"
 #include "mapa.h"
+#include "raymath.h"
 
 // Cria um nó com os dados de "novo" e o coloca no fim da lista.
 void inserir_recurso(Recursos **cabeca, Recursos novo) {
