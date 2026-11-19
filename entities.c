@@ -4,6 +4,7 @@
 #include "entities.h"
 #include "mapa.h"
 #include "raymath.h"
+#include "audio.h"
 
 // Cria um nó com os dados de "novo" e o coloca no fim da lista.
 void inserir_recurso(Recursos **cabeca, Recursos novo) {
@@ -638,6 +639,7 @@ void AtualizarMonstros(
                     if (escudoEquipado->durability > 0) {
                         escudoEquipado->durability--;
                         *cooldownEscudo = intervaloDano;
+                        TocarSom(sndEscudo);
                     }
 
                     if (escudoEquipado->durability <= 0) {
@@ -652,6 +654,7 @@ void AtualizarMonstros(
                 if (dano > 0.0f) {
                     *vida -= dano;
                     *cooldownDano = intervaloDano;
+                    TocarSom(sndApanhar);
                 }
 
                 printf("Monstro atacou! Dano: %.1f | Vida: %.1f\n",

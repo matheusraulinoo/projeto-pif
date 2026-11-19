@@ -77,7 +77,7 @@ O código está dividido em módulos: cada `.c` é compilado separadamente e o `
 Instale a raylib pelo [instalador oficial](https://github.com/raysan5/raylib/releases) (neste exemplo, em `C:\raylib`) e rode:
 
 ```bash
-gcc main.c ranking.c entities.c inventory.c crafting.c mapa.c combate.c hud.c telas.c interacao.c -o jogo.exe -I C:\raylib\include -L C:\raylib\lib -lraylib -lopengl32 -lgdi32 -lwinmm
+gcc main.c ranking.c entities.c inventory.c crafting.c mapa.c combate.c hud.c telas.c interacao.c audio.c -o jogo.exe -I C:\raylib\include -L C:\raylib\lib -lraylib -lopengl32 -lgdi32 -lwinmm
 .\jogo.exe
 ```
 
@@ -85,7 +85,7 @@ gcc main.c ranking.c entities.c inventory.c crafting.c mapa.c combate.c hud.c te
 
 ```bash
 brew install raylib
-gcc main.c ranking.c entities.c inventory.c crafting.c mapa.c combate.c hud.c telas.c interacao.c -o jogo -I/opt/homebrew/include -L/opt/homebrew/lib -lraylib \
+gcc main.c ranking.c entities.c inventory.c crafting.c mapa.c combate.c hud.c telas.c interacao.c audio.c -o jogo -I/opt/homebrew/include -L/opt/homebrew/lib -lraylib \
     -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo
 ./jogo
 ```
@@ -111,7 +111,7 @@ cd ../..
 Depois compile e execute:
 
 ```bash
-gcc main.c ranking.c entities.c inventory.c crafting.c mapa.c combate.c hud.c telas.c interacao.c -o jogo -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
+gcc main.c ranking.c entities.c inventory.c crafting.c mapa.c combate.c hud.c telas.c interacao.c audio.c -o jogo -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 ./jogo
 ```
 
@@ -131,13 +131,15 @@ scary-nights/
 ├── telas.c/.h       # Telas de início/morte e utilitários de desenho
 ├── interacao.c/.h   # Interações com lava e inventário
 ├── ranking.c/.h     # Ranking de melhores jogadores
+├── audio.c/.h       # Carregamento e reprodução de sons
 ├── mapa.txt         # Mapa da ilha
 ├── casa.txt         # Mapa da casa
 ├── caverna.txt      # Mapa da caverna
 ├── ranking.txt      # Ranking salvo com nome e pontuação
 ├── recorde.txt      # Gerado automaticamente com o melhor dia alcançado
 └── assets/
-    └── textures/    # Sprites e imagens do jogo
+    ├── textures/    # Sprites e imagens do jogo
+    └── sounds/      # Efeitos sonoros do jogo
 ```
 
 ## 🛠️ Problemas comuns

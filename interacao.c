@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "interacao.h"
+#include "audio.h"
 
 int lavaAberta = 0;
 char mensagemLava[64] = "";
@@ -30,6 +31,7 @@ void InteragirLava(Inventario *inv)
             {
                 snprintf(mensagemLava, sizeof(mensagemLava), "A lava aceitou! Voce recebeu 1 magnetita.");
                 corMensagemLava = GREEN;
+                TocarSom(sndCraft);
             }
         }
         tempoMensagemLava = 2.0f;
@@ -48,6 +50,7 @@ void InteragirInventario(Inventario *inv, int invAberto, int invX, int invY,
                 *origemInv = -1;
             } else if (inv->slots[destino].tipo != ITEM_VAZIO) {
                 *origemInv = destino;
+                TocarSom(sndSelecionar);
             }
         }
     }
@@ -84,6 +87,7 @@ void InteragirInventario(Inventario *inv, int invAberto, int invX, int invY,
             if (*origemInv != k) Inv_TrocarSlots(inv, *origemInv, k);
             *origemInv = -1;
         } else {
+            if (inv->selecionado != k) TocarSom(sndSelecionar);
             inv->selecionado = k;
         }
         break;
