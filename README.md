@@ -77,7 +77,7 @@ O código está dividido em módulos: cada `.c` é compilado separadamente e o `
 Instale a raylib pelo [instalador oficial](https://github.com/raysan5/raylib/releases) (neste exemplo, em `C:\raylib`) e rode:
 
 ```bash
-gcc main.c ranking.c entities.c inventory.c crafting.c -o jogo.exe -I C:\raylib\include -L C:\raylib\lib -lraylib -lopengl32 -lgdi32 -lwinmm
+gcc main.c ranking.c entities.c inventory.c crafting.c mapa.c combate.c hud.c telas.c interacao.c -o jogo.exe -I C:\raylib\include -L C:\raylib\lib -lraylib -lopengl32 -lgdi32 -lwinmm
 .\jogo.exe
 ```
 
@@ -85,7 +85,7 @@ gcc main.c ranking.c entities.c inventory.c crafting.c -o jogo.exe -I C:\raylib\
 
 ```bash
 brew install raylib
-gcc main.c ranking.c entities.c inventory.c crafting.c -o jogo -I/opt/homebrew/include -L/opt/homebrew/lib -lraylib \
+gcc main.c ranking.c entities.c inventory.c crafting.c mapa.c combate.c hud.c telas.c interacao.c -o jogo -I/opt/homebrew/include -L/opt/homebrew/lib -lraylib \
     -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo
 ./jogo
 ```
@@ -111,7 +111,7 @@ cd ../..
 Depois compile e execute:
 
 ```bash
-gcc main.c ranking.c entities.c inventory.c crafting.c -o jogo -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
+gcc main.c ranking.c entities.c inventory.c crafting.c mapa.c combate.c hud.c telas.c interacao.c -o jogo -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 ./jogo
 ```
 
@@ -120,17 +120,24 @@ gcc main.c ranking.c entities.c inventory.c crafting.c -o jogo -lraylib -lGL -lm
 
 ```
 scary-nights/
-├── main.c          # Loop principal, mapas, ciclo dia/noite, combate e telas
-├── ranking.c/.h    # Ranking de melhores jogadores
-├── entities.c/.h   # Monstros e recursos coletáveis
-├── inventory.c/.h  # Itens, inventário, ferramentas e barra de atalhos
-├── crafting.c/.h   # Receitas e interface de crafting
-├── mapa.txt        # Mapa da ilha
-├── casa.txt        # Mapa da casa
-├── caverna.txt     # Mapa da caverna
-├── ranking.txt     # Ranking salvo com nome e pontuação
-├── recorde.txt     # Gerado automaticamente com o melhor dia alcançado
-└── pictures/       # Sprites e imagens dos mapas
+├── main.c           # Loop principal e ciclo do jogo
+├── config.h         # Constantes e enums globais
+├── mapa.c/.h        # Carregamento de mapas, tiles e colisões
+├── entities.c/.h    # Monstros e recursos coletáveis
+├── inventory.c/.h   # Itens, inventário, ferramentas e barra de atalhos
+├── crafting.c/.h    # Receitas e interface de crafting
+├── combate.c/.h     # Ataques, slash, mineração e durabilidade
+├── hud.c/.h         # HUD, inventário aberto e barras de vida
+├── telas.c/.h       # Telas de início/morte e utilitários de desenho
+├── interacao.c/.h   # Interações com lava e inventário
+├── ranking.c/.h     # Ranking de melhores jogadores
+├── mapa.txt         # Mapa da ilha
+├── casa.txt         # Mapa da casa
+├── caverna.txt      # Mapa da caverna
+├── ranking.txt      # Ranking salvo com nome e pontuação
+├── recorde.txt      # Gerado automaticamente com o melhor dia alcançado
+└── assets/
+    └── textures/    # Sprites e imagens do jogo
 ```
 
 ## 🛠️ Problemas comuns
