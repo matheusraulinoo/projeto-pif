@@ -17,6 +17,10 @@ typedef struct {
     int totalIng;
 } Receita;
 
+// Lista de receitas (definida em crafting.c)
+extern Receita receitasCraft[];
+int TotalReceitas(void);
+
 int PodeCraftar(Inventario *inv, Receita r);
 int Craftar(Inventario *inv, Receita r);
 int DesenharCraftingUI(Receita *receitas, int total, Inventario *inv,

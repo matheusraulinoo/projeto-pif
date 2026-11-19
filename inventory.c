@@ -69,20 +69,20 @@ static Item NovoItem(const char *nome, int max, Color cor, const char *caminho) 
 static void CarregarFerramenta(TipoItem tipo, const char *base) {
     for (int t = 0; t < TIER_COUNT; t++) {
         char caminho[96];
-        snprintf(caminho, sizeof(caminho), "pictures/%s_%s.png", base, tierArquivo[t]);
+        snprintf(caminho, sizeof(caminho), "assets/textures/%s_%s.png", base, tierArquivo[t]);
         spritesFerramenta[tipo][t] = CarregarSprite(caminho);
     }
 }
 
 void Itens_Init(void) {
     itens[ITEM_VAZIO]     = (Item){ 0 };
-    itens[ITEM_MADEIRA]   = NovoItem("Madeira",   MAX_STACK, (Color){139, 69, 19, 255},  "pictures/madeira.png");
-    itens[ITEM_GRAVETO]   = NovoItem("Graveto",   MAX_STACK, (Color){160, 110, 50, 255}, "pictures/graveto.png");
-    itens[ITEM_PEDRA]     = NovoItem("Pedra",     MAX_STACK, GRAY,                       "pictures/pedra.png");
-    itens[ITEM_FERRO]     = NovoItem("Ferro",     MAX_STACK, LIGHTGRAY,                  "pictures/ferro.png");
-    itens[ITEM_OURO]      = NovoItem("Ouro",      MAX_STACK, GOLD,                       "pictures/ouro.png");
-    itens[ITEM_DIAMANTE]  = NovoItem("Diamante",  MAX_STACK, SKYBLUE,                    "pictures/diamante.png");
-    itens[ITEM_MAGNETITA] = NovoItem("Magnetita", MAX_STACK, DARKGRAY,                   "pictures/magnetita.png");
+    itens[ITEM_MADEIRA]   = NovoItem("Madeira",   MAX_STACK, (Color){139, 69, 19, 255},  "assets/textures/madeira.png");
+    itens[ITEM_GRAVETO]   = NovoItem("Graveto",   MAX_STACK, (Color){160, 110, 50, 255}, "assets/textures/graveto.png");
+    itens[ITEM_PEDRA]     = NovoItem("Pedra",     MAX_STACK, GRAY,                       "assets/textures/pedra.png");
+    itens[ITEM_FERRO]     = NovoItem("Ferro",     MAX_STACK, LIGHTGRAY,                  "assets/textures/ferro.png");
+    itens[ITEM_OURO]      = NovoItem("Ouro",      MAX_STACK, GOLD,                       "assets/textures/ouro.png");
+    itens[ITEM_DIAMANTE]  = NovoItem("Diamante",  MAX_STACK, SKYBLUE,                    "assets/textures/diamante.png");
+    itens[ITEM_MAGNETITA] = NovoItem("Magnetita", MAX_STACK, DARKGRAY,                   "assets/textures/magnetita.png");
     itens[ITEM_ESPADA]   = NovoItem("Espada",   1, WHITE, NULL);
     itens[ITEM_MACHADO]  = NovoItem("Machado",  1, WHITE, NULL);
     itens[ITEM_PICARETA] = NovoItem("Picareta", 1, WHITE, NULL);
