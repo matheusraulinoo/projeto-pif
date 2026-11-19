@@ -13,6 +13,7 @@
 #include "hud.h"
 #include "telas.h"
 #include "interacao.h"
+#include "audio.h"
 // Ao modificar o codigo, o projeto deve ser recompilado para que as alterações tenham efeito.
 // comando pra fazer isso: gcc *.c -o jogo.exe -I C:\raylib\include -L C:\raylib\lib -lraylib -lopengl32 -lgdi32 -lwinmm
 // certifique-se de que o jogo previamente aberto foi fechado antes de recompilar.
@@ -24,6 +25,7 @@ int main(void)
 {
     InitWindow(LARGURA_TELA, ALTURA_TELA, "Scary Nights");
     SetTargetFPS(60);
+    Audio_Init();
 
 
     Itens_Init();
@@ -84,6 +86,7 @@ int main(void)
     Color corAviso = WHITE;
     float tempoMensagemCraft = 0.0f;
     Color corMensagemCraft = WHITE;
+    float timerPassos = 0.0f;
 
     // --- CARREGAMENTO DE TEXTURAS (Uma única vez aqui) ---
     float tempo_jogo = 0.0f;          // Conta os segundos passados no jogo
@@ -289,6 +292,7 @@ int main(void)
         {
             tempo_jogo -= duracao_dia_noite;
             dia++;
+            TocarSom(sndAmanhecer);
 
             // Diminui o intervalo de spawn conforme os dias passam
             intervaloSpawn = 5.0f - 0.3f * (dia - 1);
@@ -359,6 +363,7 @@ int main(void)
                     dentro = 1;
                     jogador = (Vector2){ CASA_SPAWN_X, CASA_SPAWN_Y };
                     localAtual = LOCAL_CASA;
+                    TocarSom(sndEntrarCasa);
                 }
             }
             else
@@ -368,6 +373,7 @@ int main(void)
                     dentro = 0;
                     jogador = posAntesDeEntrar;
                     localAtual = LOCAL_ILHA;
+                    TocarSom(sndEntrarCasa);
                 }
             }
         }
@@ -381,6 +387,7 @@ int main(void)
                     dentro = 1;
                     jogador = (Vector2){ CAVERNA_SPAWN_X, CAVERNA_SPAWN_Y };
                     localAtual = LOCAL_CAVERNA;
+                    TocarSom(sndEntrarCasa);
                 }
             }
             else
@@ -390,6 +397,7 @@ int main(void)
                     dentro = 0;
                     jogador = posAntesDeEntrar;
                     localAtual = LOCAL_ILHA;
+                    TocarSom(sndEntrarCasa);
                 }
             }
         }
@@ -418,11 +426,20 @@ int main(void)
                 timerAnim = 0.0f;
                 frameAtual = (frameAtual + 1) % SPRITE_FRAMES;
             }
+
+            timerPassos -= dt;
+            if (timerPassos <= 0.0f)
+            {
+                if (localAtual == LOCAL_CASA) TocarSom(sndAndarCasa);
+                else TocarSom(sndAndarIlha);
+                timerPassos = 0.38f;
+            }
         }
         else
         {
             frameAtual = 0;   // parado = primeiro frame
             timerAnim = 0.0f;
+            timerPassos = 0.0f;   // toca ao dar o proximo passo
         }
 
         // Câmera segue o jogador
@@ -476,6 +493,7 @@ int main(void)
             // Duracao visual depende da ferramenta usada
             duracaoSlash = ferramentaAnimacao.duracaoAnimacao;
             timerSlash = duracaoSlash;
+            TocarSom(sndBater);
 
             bool acertouAlvo = false;
 
@@ -517,6 +535,7 @@ int main(void)
 
             // Consome durabilidade apenas quando acertar um alvo
             if (acertouAlvo) {
+                TocarSom(sndAtingiu);
                 ConsumirDurabilidade(&inv, &ferramentaAtual);
             }
             
@@ -613,6 +632,7 @@ int main(void)
         if (vida <= 0.0f)
         {
             vida = 0.0f;
+            TocarSom(sndMorrer);
             telaAtual = TELA_MORTE;
             tempoMorte = 0.0f;
         }
@@ -799,6 +819,7 @@ int main(void)
                         snprintf(mensagemCraft, sizeof(mensagemCraft),
                                  "Craftado: %s", receitasCraft[receitaSelecionada].nome);
                         corMensagemCraft = GREEN;
+                        TocarSom(sndCraft);
                     } else {
                         snprintf(mensagemCraft, sizeof(mensagemCraft),
                                  "Faltam ingredientes ou espaco!");
@@ -817,7 +838,6 @@ int main(void)
         ApresentarTela(tela, destinoTela);
     }
     // --- DESCARREGAR RECURSOS ---
-        // --- DESCARREGAR RECURSOS ---
     Itens_Unload();
     liberar_recursos(arvores);
     liberar_recursos(pedras);
@@ -836,6 +856,7 @@ int main(void)
     UnloadTexture(texDiamante);
     UnloadRenderTexture(tela);
     for (int i = 0; i < 3; i++) UnloadTexture(texMapas[i]);
+    Audio_Unload();
     CloseWindow();
     return 0;
 }
