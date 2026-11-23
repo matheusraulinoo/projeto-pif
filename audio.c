@@ -1,19 +1,5 @@
 #include "audio.h"
 
-Sound sndAmanhecer;
-Sound sndAndarCasa;
-Sound sndAndarIlha;
-Sound sndAndarCaverna;
-Sound sndApanhar;
-Sound sndAtingiu;
-Sound sndBater;
-Sound sndCraft;
-Sound sndEntrarCasa;
-Sound sndEntrarCaverna;
-Sound sndEscudo;
-Sound sndMorrer;
-Sound sndSelecionar;
-
 void Audio_Init(void)
 {
     InitAudioDevice();
